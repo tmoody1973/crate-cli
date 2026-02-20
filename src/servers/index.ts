@@ -1,13 +1,15 @@
 // src/servers/index.ts
 import { musicbrainzServer } from "./musicbrainz.js";
+import { discogsServer } from "./discogs.js";
 
 export function getActiveServers(): Record<string, any> {
   const servers: Record<string, any> = {
     musicbrainz: musicbrainzServer,
   };
 
-  // Future key-gated servers:
-  // if (process.env.DISCOGS_TOKEN) servers.discogs = discogsServer;
+  // Key-gated servers:
+  if (process.env.DISCOGS_KEY && process.env.DISCOGS_SECRET)
+    servers.discogs = discogsServer;
   // if (process.env.MEM0_API_KEY) servers.memory = memoryServer;
   // if (process.env.LASTFM_API_KEY) servers.lastfm = lastfmServer;
   // if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET)

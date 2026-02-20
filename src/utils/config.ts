@@ -4,7 +4,7 @@ const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
 const KEY_GATED_SERVERS: Record<string, string[]> = {
   memory: ["MEM0_API_KEY"],
-  discogs: ["DISCOGS_TOKEN"],
+  discogs: ["DISCOGS_KEY", "DISCOGS_SECRET"],
   spotify: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"],
   lastfm: ["LASTFM_API_KEY"],
   genius: ["GENIUS_ACCESS_TOKEN"],

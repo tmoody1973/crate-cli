@@ -41,6 +41,25 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
         : `Searching for "${input.query}"...`;
     case "get_recording_credits":
       return "Fetching recording credits...";
+    // Discogs tools
+    case "search_discogs":
+      return `Searching Discogs for "${input.query}"...`;
+    case "get_artist_discogs":
+      return "Fetching Discogs artist profile...";
+    case "get_artist_releases":
+      return "Fetching artist discography from Discogs...";
+    case "get_label":
+      return "Fetching label profile from Discogs...";
+    case "get_label_releases":
+      return "Fetching label catalog from Discogs...";
+    case "get_master":
+      return "Fetching master release from Discogs...";
+    case "get_master_versions":
+      return "Fetching release versions from Discogs...";
+    case "get_release_full":
+      return "Fetching full release details from Discogs...";
+    case "get_marketplace_stats":
+      return "Fetching marketplace pricing from Discogs...";
     default:
       return `Using ${bare.replace(/_/g, " ")}...`;
   }

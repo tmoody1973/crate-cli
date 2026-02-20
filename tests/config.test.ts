@@ -19,16 +19,16 @@ describe("config", () => {
   });
 
   it("detects available API keys", async () => {
-    process.env.DISCOGS_TOKEN = "test-token";
+    process.env.DISCOGS_KEY = "test-key";
     const { getConfig } = await import("../src/utils/config.js");
     const config = getConfig();
-    expect(config.availableKeys).toContain("DISCOGS_TOKEN");
+    expect(config.availableKeys).toContain("DISCOGS_KEY");
   });
 
   it("does not list missing keys as available", async () => {
-    delete process.env.DISCOGS_TOKEN;
+    delete process.env.DISCOGS_KEY;
     const { getConfig } = await import("../src/utils/config.js");
     const config = getConfig();
-    expect(config.availableKeys).not.toContain("DISCOGS_TOKEN");
+    expect(config.availableKeys).not.toContain("DISCOGS_KEY");
   });
 });

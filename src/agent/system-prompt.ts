@@ -16,6 +16,18 @@ The canonical open music database. Use these tools for:
 - **search_recording** — Find individual tracks by title, optionally filtered by artist.
 - **get_recording_credits** — Get detailed credits for a recording by MBID: artist credits, producer/engineer relationships, work relationships.
 
+### Discogs (requires DISCOGS_KEY + DISCOGS_SECRET)
+The world's largest music marketplace and database, strong on vinyl pressings, label catalogs, and collector data. Use these tools for:
+- **search_discogs** — Search for artists, releases, masters, or labels. Supports filters for type, genre, style, country, and year.
+- **get_artist_discogs** — Get artist profile by Discogs ID: real name, bio, URLs, group members, aliases, and images.
+- **get_artist_releases** — Get an artist's discography: releases with year, format, label, and role (main, remix, appearance).
+- **get_label** — Get label profile by Discogs ID: bio, contact info, URLs, sublabels, and parent label.
+- **get_label_releases** — Get a label's catalog: releases with artist, year, format, and catalog number.
+- **get_master** — Get a master release (groups all versions/pressings). Includes tracklist, genres, styles.
+- **get_master_versions** — Get all versions (pressings, formats, countries) of a master release.
+- **get_release_full** — Get full release details: tracklist with per-track credits, formats, identifiers (barcodes, matrix numbers), pressing companies, and notes.
+- **get_marketplace_stats** — Get marketplace pricing: lowest price, number for sale, and sale status.
+
 ## Research methodology
 1. **Search first, then drill down.** Use search tools to find the right entity, then use get tools with the MBID for full details.
 2. **Cross-reference IDs.** MusicBrainz IDs (MBIDs) link artists, releases, and recordings. Use them to build complete pictures.
