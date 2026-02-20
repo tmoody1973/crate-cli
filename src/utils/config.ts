@@ -1,0 +1,42 @@
+import "dotenv/config";
+
+const DEFAULT_MODEL = "claude-sonnet-4-6";
+
+const KEY_GATED_SERVERS: Record<string, string[]> = {
+  memory: ["MEM0_API_KEY"],
+  discogs: ["DISCOGS_TOKEN"],
+  spotify: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"],
+  lastfm: ["LASTFM_API_KEY"],
+  genius: ["GENIUS_ACCESS_TOKEN"],
+  events: ["TICKETMASTER_API_KEY"],
+  wikipedia: ["WIKIPEDIA_ACCESS_TOKEN"],
+};
+
+const AVAILABLE_MODELS: Record<string, string> = {
+  sonnet: "claude-sonnet-4-6",
+  opus: "claude-opus-4-6",
+  haiku: "claude-haiku-4-5-20251001",
+};
+
+export interface CrateConfig {
+  defaultModel: string;
+  availableKeys: string[];
+  availableModels: Record<string, string>;
+  keyGatedServers: Record<string, string[]>;
+}
+
+export function getConfig(): CrateConfig {
+  const allKeys = Object.values(KEY_GATED_SERVERS).flat();
+  const availableKeys = allKeys.filter((key) => !!process.env[key]);
+
+  return {
+    defaultModel: DEFAULT_MODEL,
+    availableKeys,
+    availableModels: AVAILABLE_MODELS,
+    keyGatedServers: KEY_GATED_SERVERS,
+  };
+}
+
+export function resolveModel(alias: string): string {
+  return AVAILABLE_MODELS[alias.toLowerCase()] ?? alias;
+}
