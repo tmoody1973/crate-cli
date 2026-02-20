@@ -2,10 +2,41 @@
 import chalk from "chalk";
 import type { MarkdownTheme, EditorTheme } from "@mariozechner/pi-tui";
 
+/**
+ * Wrap visible text in an OSC 8 clickable hyperlink sequence.
+ * Supported by iTerm2, Kitty, WezTerm, Windows Terminal, GNOME Terminal 3.26+.
+ * Unsupported terminals silently ignore the sequences.
+ */
+function osc8(url: string, text: string): string {
+  return `\x1b]8;;${url}\x07${text}\x1b]8;;\x07`;
+}
+
+/**
+ * Extract a raw URL from a string that may contain ANSI codes and
+ * parenthetical wrapping like " (https://example.com)".
+ */
+function extractUrl(s: string): string {
+  const stripped = s.replace(/\x1b\[[0-9;]*m/g, "");
+  const match = stripped.match(/\bhttps?:\/\/[^\s)]+/);
+  return match ? match[0] : "";
+}
+
 export const markdownTheme: MarkdownTheme = {
   heading: (s: string) => chalk.bold.cyan(s),
-  link: (s: string) => chalk.blue(s),
-  linkUrl: (s: string) => chalk.dim(s),
+  // pi-tui calls link() for the visible link text. When text == href (bare URLs),
+  // this is the only function called, so we wrap it in OSC 8 for clickability.
+  // The underline styling is already applied by pi-tui before calling this.
+  link: (s: string) => {
+    // Try to extract a URL from the styled text (for bare-URL links where text == href)
+    const url = extractUrl(s);
+    return url ? osc8(url, chalk.blue(s)) : chalk.blue(s);
+  },
+  // pi-tui calls linkUrl() for the " (url)" suffix when link text differs from href.
+  // Receives " (https://...)" — we make the URL portion clickable via OSC 8.
+  linkUrl: (s: string) => {
+    const url = extractUrl(s);
+    return url ? osc8(url, chalk.dim(s)) : chalk.dim(s);
+  },
   code: (s: string) => chalk.yellow(s),
   codeBlock: (s: string) => chalk.gray(s),
   codeBlockBorder: (s: string) => chalk.dim(s),
@@ -30,10 +61,29 @@ export const editorTheme: EditorTheme = {
   },
 };
 
-export const WELCOME_TEXT = `${chalk.bold.cyan("Crate")} ${chalk.dim("v0.1.0")} — Music research agent
+const BANNER = [
+  ` ██████╗██████╗  █████╗ ████████╗███████╗`,
+  `██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██╔════╝`,
+  `██║     ██████╔╝███████║   ██║   █████╗  `,
+  `██║     ██╔══██╗██╔══██║   ██║   ██╔══╝  `,
+  `╚██████╗██║  ██║██║  ██║   ██║   ███████╗`,
+  ` ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝`,
+]
+  .map((line) => chalk.bold.hex("#E86A47")(line))
+  .join("\n");
 
-${chalk.dim("Type a question to start researching. Use /help for commands.")}
-${chalk.dim("Press Enter to send, Escape to cancel.")}`;
+const SEPARATOR = chalk.dim("───────────────────────────────────────────");
+
+const DESCRIPTION = `Crate is an AI-powered music research agent for DJs, collectors, and serious listeners. Ask about any artist, album, label, or recording and Crate will dig through multiple databases to surface credits, pressings, pricing, and connections you won't find in one place.`;
+
+export const WELCOME_TEXT = `${BANNER}
+${SEPARATOR}
+${chalk.bold.white("deep music research agent")}${chalk.dim("                          v0.5.0")}
+${chalk.dim("MusicBrainz · Discogs · Genius · Wikipedia · +5")}
+
+${chalk.dim(DESCRIPTION)}
+
+${chalk.dim("Type a question to start researching. Use /help for commands.")}`;
 
 export const HELP_TEXT = `${chalk.bold.cyan("Commands")}
 
