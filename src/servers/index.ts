@@ -19,7 +19,7 @@ export function getActiveServers(): Record<string, any> {
   //   servers.spotify = spotifyServer;
   if (process.env.GENIUS_ACCESS_TOKEN) servers.genius = geniusServer;
   // if (process.env.TICKETMASTER_API_KEY) servers.events = eventsServer;
-  if (process.env.WIKIPEDIA_ACCESS_TOKEN) servers.wikipedia = wikipediaServer;
+  servers.wikipedia = wikipediaServer; // Always available (free endpoints; Enterprise optional)
 
   return servers;
 }

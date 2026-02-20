@@ -1,26 +1,31 @@
 // src/servers/wikipedia.ts
 /**
- * Wikipedia / Wikimedia API tools — biographical context, historical narrative,
+ * Wikipedia tools — biographical context, historical narrative,
  * genre histories, scene overviews, and cultural significance.
  *
- * Key value: narrative and historical context that structured music databases
- * (MusicBrainz, Discogs) can't provide — artist biographies, genre origins,
- * cultural movements, label histories, venue significance.
- *
- * Uses the Wikimedia Core REST API (api.wikimedia.org) which requires a
- * Personal API Token (free at api.wikimedia.org/wiki/Getting_started).
- *
- * Endpoints:
- *   - Search:   GET /core/v1/wikipedia/en/search/page?q=...&limit=...
- *   - Page:     GET /core/v1/wikipedia/en/page/{title}        (wikitext source)
+ * Free endpoints (always available, no API key):
+ *   - Search:   GET https://en.wikipedia.org/w/rest.php/v1/search/page?q=...&limit=...
  *   - Summary:  GET https://en.wikipedia.org/api/rest_v1/page/summary/{title}
+ *   - Page:     GET https://en.wikipedia.org/w/rest.php/v1/page/{title}  (wikitext source)
+ *
+ * Enterprise endpoints (optional, requires WIKIMEDIA_USERNAME + WIKIMEDIA_PASSWORD):
+ *   - Auth:     POST https://auth.enterprise.wikimedia.com/v1/login
+ *   - Article:  GET  https://api.enterprise.wikimedia.com/v2/structured-contents/en.wikipedia/{title}
  */
 
 import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 
-const CORE_BASE = "https://api.wikimedia.org/core/v1/wikipedia/en";
-const SUMMARY_BASE = "https://en.wikipedia.org/api/rest_v1/page/summary";
+// Free public endpoints (no auth required)
+const SEARCH_URL = "https://en.wikipedia.org/w/rest.php/v1/search/page";
+const SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary";
+const PAGE_URL = "https://en.wikipedia.org/w/rest.php/v1/page";
+
+// Wikimedia Enterprise endpoints (optional)
+const ENTERPRISE_AUTH_URL = "https://auth.enterprise.wikimedia.com/v1/login";
+const ENTERPRISE_API_URL = "https://api.enterprise.wikimedia.com/v2/structured-contents";
+
+const USER_AGENT = "Crate/1.0 (music research CLI; https://github.com/crate-music)";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -35,25 +40,6 @@ function toolResult(data: unknown): ToolResult {
 function toolError(error: unknown): ToolResult {
   const message = error instanceof Error ? error.message : String(error);
   return { content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }] };
-}
-
-export function wikiHeaders(): Record<string, string> {
-  const token = process.env.WIKIPEDIA_ACCESS_TOKEN ?? "";
-  return {
-    Authorization: `Bearer ${token}`,
-    "Api-User-Agent": "Crate/1.0 (music research CLI; https://github.com/crate-music)",
-    Accept: "application/json",
-  };
-}
-
-export async function wikiGet(url: string): Promise<any> {
-  const resp = await fetch(url, { headers: wikiHeaders() });
-  if (!resp.ok) {
-    if (resp.status === 401) throw new Error("Invalid Wikipedia access token. Check WIKIPEDIA_ACCESS_TOKEN.");
-    if (resp.status === 404) throw new Error("Page not found on Wikipedia.");
-    throw new Error(`Wikipedia API error: ${resp.status} ${resp.statusText}`);
-  }
-  return resp.json();
 }
 
 /** Strip HTML tags for cleaner text output */
@@ -107,6 +93,52 @@ export function cleanWikitext(source: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Enterprise JWT token management (optional)
+// ---------------------------------------------------------------------------
+
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+export function hasEnterpriseCredentials(): boolean {
+  return !!(process.env.WIKIMEDIA_USERNAME && process.env.WIKIMEDIA_PASSWORD);
+}
+
+export async function getEnterpriseToken(): Promise<string | null> {
+  if (!hasEnterpriseCredentials()) return null;
+
+  // Return cached token if still valid (with 60s buffer)
+  if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
+    return cachedToken.token;
+  }
+
+  const resp = await fetch(ENTERPRISE_AUTH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: process.env.WIKIMEDIA_USERNAME,
+      password: process.env.WIKIMEDIA_PASSWORD,
+    }),
+  });
+
+  if (!resp.ok) {
+    cachedToken = null;
+    return null; // Silently fall back to free API
+  }
+
+  const data = await resp.json();
+  cachedToken = {
+    token: data.access_token,
+    expiresAt: Date.now() + (data.expires_in ? data.expires_in * 1000 : 23 * 3600_000),
+  };
+
+  return cachedToken.token;
+}
+
+/** Reset cached Enterprise token (exported for testing) */
+export function resetTokenCache(): void {
+  cachedToken = null;
+}
+
+// ---------------------------------------------------------------------------
 // Handler functions (exported for testing)
 // ---------------------------------------------------------------------------
 
@@ -116,14 +148,26 @@ export async function searchArticlesHandler(args: {
 }) {
   try {
     const limit = args.limit ?? 5;
-    const url = `${CORE_BASE}/search/page?q=${encodeURIComponent(args.query)}&limit=${limit}`;
-    const data = await wikiGet(url);
+    const url = `${SEARCH_URL}?q=${encodeURIComponent(args.query)}&limit=${limit}`;
+    const resp = await fetch(url, {
+      headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Wikipedia search API error: ${resp.status} ${resp.statusText}`);
+    }
+
+    const data = await resp.json();
     const pages = (data.pages ?? []).map((page: any) => ({
       title: page.title,
       key: page.key,
       description: page.description ?? "",
       excerpt: page.excerpt ? stripHtml(page.excerpt) : "",
-      thumbnail: page.thumbnail?.url ? `https:${page.thumbnail.url}` : null,
+      thumbnail: page.thumbnail?.url
+        ? page.thumbnail.url.startsWith("//")
+          ? `https:${page.thumbnail.url}`
+          : page.thumbnail.url
+        : null,
     }));
     return toolResult({ query: args.query, result_count: pages.length, pages });
   } catch (error) {
@@ -133,13 +177,9 @@ export async function searchArticlesHandler(args: {
 
 export async function getSummaryHandler(args: { title: string }) {
   try {
-    // The summary endpoint is a public REST endpoint — no Bearer auth needed.
-    const url = `${SUMMARY_BASE}/${encodeURIComponent(args.title)}`;
+    const url = `${SUMMARY_URL}/${encodeURIComponent(args.title)}`;
     const resp = await fetch(url, {
-      headers: {
-        "Api-User-Agent": "Crate/1.0 (music research CLI; https://github.com/crate-music)",
-        Accept: "application/json",
-      },
+      headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
     });
 
     if (!resp.ok) {
@@ -162,30 +202,96 @@ export async function getSummaryHandler(args: { title: string }) {
   }
 }
 
+/**
+ * Try fetching via Wikimedia Enterprise API. Returns cleaned text or null.
+ */
+async function fetchEnterpriseArticle(
+  title: string,
+): Promise<{ content: string; id?: number } | null> {
+  const token = await getEnterpriseToken();
+  if (!token) return null;
+
+  try {
+    const url = `${ENTERPRISE_API_URL}/en.wikipedia/${encodeURIComponent(title)}`;
+    const resp = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Api-User-Agent": USER_AGENT,
+        Accept: "application/json",
+      },
+    });
+
+    if (!resp.ok) return null;
+
+    const data = await resp.json();
+    // Enterprise returns structured content — prefer wikitext if available, else HTML
+    const wikitext = data.article_body?.wikitext;
+    const html = data.article_body?.html;
+    const content = wikitext ? cleanWikitext(wikitext) : html ? stripHtml(html) : null;
+    if (!content) return null;
+
+    return { content, id: data.identifier };
+  } catch {
+    return null; // Fall back to free API
+  }
+}
+
+/**
+ * Fetch article via free Wikipedia REST API (wikitext source).
+ */
+async function fetchFreeArticle(title: string): Promise<{
+  content: string;
+  id?: number;
+  key?: string;
+  license?: string;
+  lastEdited?: string | null;
+}> {
+  const url = `${PAGE_URL}/${encodeURIComponent(title)}`;
+  const resp = await fetch(url, {
+    headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
+  });
+
+  if (!resp.ok) {
+    if (resp.status === 404) throw new Error(`Wikipedia article not found: "${title}"`);
+    throw new Error(`Wikipedia API error: ${resp.status} ${resp.statusText}`);
+  }
+
+  const data = await resp.json();
+  return {
+    content: cleanWikitext(data.source ?? ""),
+    id: data.id,
+    key: data.key ?? title,
+    license: data.license?.title ?? "CC BY-SA 4.0",
+    lastEdited: data.latest?.timestamp ?? null,
+  };
+}
+
 export async function getArticleHandler(args: {
   title: string;
   max_chars?: number;
 }) {
   try {
     const maxChars = args.max_chars ?? 8000;
-    const url = `${CORE_BASE}/page/${encodeURIComponent(args.title)}`;
-    const data = await wikiGet(url);
 
-    const source = data.source ?? "";
-    const cleanText = cleanWikitext(source);
+    // Try Enterprise first, fall back to free API
+    const enterprise = await fetchEnterpriseArticle(args.title);
+    const free = enterprise ? null : await fetchFreeArticle(args.title);
 
+    const cleanText = enterprise?.content ?? free!.content;
     const truncated = cleanText.length > maxChars;
     const text = truncated
       ? cleanText.slice(0, maxChars) + "\n\n[... article truncated]"
       : cleanText;
 
+    const key = free?.key ?? args.title;
     return toolResult({
-      title: data.title ?? args.title,
-      id: data.id,
-      key: data.key ?? args.title,
-      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(data.key ?? args.title)}`,
-      license: data.license?.title ?? "CC BY-SA 4.0",
-      last_edited: data.latest?.timestamp ?? null,
+      title: args.title,
+      id: enterprise?.id ?? free?.id,
+      key,
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(key)}`,
+      license: free?.license ?? "CC BY-SA 4.0",
+      last_edited: free?.lastEdited ?? null,
+      source: enterprise ? "enterprise" : "free",
       char_count: cleanText.length,
       truncated,
       content: text,
@@ -230,7 +336,8 @@ const getArticle = tool(
   "Get the full Wikipedia article content as clean plaintext. " +
     "Use for deep research when the summary isn't enough — full career histories, " +
     "detailed discography sections, scene timelines, label rosters. " +
-    "Returns cleaned text with section headers preserved. Can be long.",
+    "Returns cleaned text with section headers preserved. Can be long. " +
+    "Uses Wikimedia Enterprise API when credentials are configured for richer content.",
   {
     title: z.string().describe(
       "Wikipedia article title (e.g. 'J_Dilla', 'Warp_Records', 'UK_garage'). " +
@@ -249,6 +356,6 @@ const getArticle = tool(
 
 export const wikipediaServer = createSdkMcpServer({
   name: "wikipedia",
-  version: "1.0.0",
+  version: "2.0.0",
   tools: [searchArticles, getSummary, getArticle],
 });
