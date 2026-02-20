@@ -152,4 +152,97 @@ describe("bandcamp", () => {
       expect(data.error).toBeDefined();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // getArtistPageHandler
+  // -------------------------------------------------------------------------
+  describe("getArtistPageHandler", () => {
+    it("returns artist profile from pagedata", async () => {
+      const pagedata = encodeURIComponent(JSON.stringify({
+        bio: { text: "An electronic artist from Portland." },
+        name: "Test Artist",
+        band_id: 12345,
+        image_id: 67890,
+        discography: [
+          {
+            title: "First Album",
+            page_url: "/album/first",
+            item_type: "album",
+            release_date: "01 Jan 2024 00:00:00 GMT",
+            art_id: 111,
+          },
+        ],
+        bandLinks: [{ url: "https://twitter.com/artist" }],
+      }));
+
+      // First fetch: artist page HTML
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          `<div id="pagedata" data-blob="${pagedata}"></div>
+           <p id="band-name-location"><span class="location">Portland, Oregon</span></p>`,
+      });
+
+      // Second fetch: RSS feed
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `<?xml version="1.0"?>
+          <rss version="2.0">
+            <channel>
+              <item>
+                <title>New Release</title>
+                <link>https://artist.bandcamp.com/album/new</link>
+                <pubDate>Mon, 15 Jan 2024 00:00:00 GMT</pubDate>
+              </item>
+            </channel>
+          </rss>`,
+      });
+
+      const { getArtistPageHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistPageHandler({ url: "https://artist.bandcamp.com" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.name).toBe("Test Artist");
+      expect(data.band_id).toBe(12345);
+      expect(data.bio).toBe("An electronic artist from Portland.");
+      expect(data.discography).toHaveLength(1);
+      expect(data.discography[0].title).toBe("First Album");
+      expect(data.discography[0].type).toBe("album");
+      expect(data.links).toContain("https://twitter.com/artist");
+      expect(data.recent_feed).toHaveLength(1);
+      expect(data.recent_feed[0].title).toBe("New Release");
+    });
+
+    it("returns error on fetch failure", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+      const { getArtistPageHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistPageHandler({ url: "https://bad.bandcamp.com" });
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toBeDefined();
+    });
+
+    it("works without RSS feed", async () => {
+      const pagedata = encodeURIComponent(JSON.stringify({
+        name: "Minimal Artist",
+        discography: [],
+      }));
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `<div id="pagedata" data-blob="${pagedata}"></div>`,
+      });
+
+      // RSS feed fails
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+      const { getArtistPageHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistPageHandler({ url: "https://minimal.bandcamp.com" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.name).toBe("Minimal Artist");
+      expect(data.recent_feed).toBeUndefined();
+    });
+  });
+
 });

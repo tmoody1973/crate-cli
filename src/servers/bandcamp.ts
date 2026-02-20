@@ -13,8 +13,10 @@
 import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import * as cheerio from "cheerio";
+import RSSParser from "rss-parser";
 
 const USER_AGENT = "Crate/1.0 (music-research-agent)";
+const rssParser = new RSSParser();
 
 // ---------------------------------------------------------------------------
 // Rate Limiting
@@ -179,6 +181,76 @@ export async function searchBandcampHandler(args: {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// get_artist_page handler
+// ---------------------------------------------------------------------------
+
+export async function getArtistPageHandler(args: { url: string }) {
+  try {
+    const html = await bandcampFetch(args.url);
+    if (!html) throw new Error(`Failed to fetch artist page: ${args.url}`);
+
+    const pagedata = extractPagedata(html);
+    const $ = cheerio.load(html);
+
+    const name = pagedata?.name ?? $("meta[property='og:title']").attr("content") ?? "Unknown";
+    const location = $(".location").first().text().trim() || undefined;
+    const bio = pagedata?.bio?.text || undefined;
+    const bandId = pagedata?.band_id || undefined;
+    const imageUrl = pagedata?.image_id
+      ? `https://f4.bcbits.com/img/${pagedata.image_id}_0.jpg`
+      : undefined;
+
+    const discography = (pagedata?.discography ?? []).map((item: any) => ({
+      title: item.title,
+      url: item.page_url
+        ? new URL(item.page_url, args.url).href
+        : undefined,
+      type: item.item_type === "album" ? "album" : "track",
+      release_date: item.release_date || undefined,
+      art_url: item.art_id
+        ? `https://f4.bcbits.com/img/a${item.art_id}_0.jpg`
+        : undefined,
+    }));
+
+    const links = (pagedata?.bandLinks ?? [])
+      .map((l: any) => l.url)
+      .filter(Boolean);
+
+    // Try RSS feed for recent releases
+    let recentFeed: any[] | undefined;
+    try {
+      const feedUrl = args.url.replace(/\/$/, "") + "/feed";
+      const feedHtml = await bandcampFetch(feedUrl);
+      if (feedHtml) {
+        const feed = await rssParser.parseString(feedHtml);
+        recentFeed = feed.items.slice(0, 10).map((item) => ({
+          title: item.title ?? "",
+          url: item.link ?? "",
+          date: item.pubDate ?? "",
+        }));
+      }
+    } catch {
+      // RSS feed optional — silently skip on failure
+    }
+
+    return toolResult({
+      name,
+      url: args.url,
+      ...(location && { location }),
+      ...(bio && { bio }),
+      ...(imageUrl && { image_url: imageUrl }),
+      ...(bandId && { band_id: bandId }),
+      discography,
+      ...(links.length > 0 && { links }),
+      ...(recentFeed && recentFeed.length > 0 && { recent_feed: recentFeed }),
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
 const searchBandcamp = tool(
   "search_bandcamp",
   "Search Bandcamp for artists, albums, tracks, or labels. " +
@@ -194,6 +266,19 @@ const searchBandcamp = tool(
   searchBandcampHandler,
 );
 
+const getArtistPage = tool(
+  "get_artist_page",
+  "Get full artist/label profile from their Bandcamp page. " +
+    "Returns bio, location, discography, external links, and recent releases. " +
+    "Requires the artist's Bandcamp URL (e.g. https://artist.bandcamp.com).",
+  {
+    url: z.string().url().describe("Artist's Bandcamp URL (e.g. https://artist.bandcamp.com)"),
+  },
+  getArtistPageHandler,
+);
+
+
+
 // ---------------------------------------------------------------------------
 // Server export
 // ---------------------------------------------------------------------------
@@ -201,5 +286,5 @@ const searchBandcamp = tool(
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [searchBandcamp],
+  tools: [searchBandcamp, getArtistPage],
 });
