@@ -1,6 +1,7 @@
 // src/servers/index.ts
 import { musicbrainzServer } from "./musicbrainz.js";
 import { discogsServer } from "./discogs.js";
+import { geniusServer } from "./genius.js";
 
 export function getActiveServers(): Record<string, any> {
   const servers: Record<string, any> = {
@@ -14,7 +15,7 @@ export function getActiveServers(): Record<string, any> {
   // if (process.env.LASTFM_API_KEY) servers.lastfm = lastfmServer;
   // if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET)
   //   servers.spotify = spotifyServer;
-  // if (process.env.GENIUS_ACCESS_TOKEN) servers.genius = geniusServer;
+  if (process.env.GENIUS_ACCESS_TOKEN) servers.genius = geniusServer;
   // if (process.env.TICKETMASTER_API_KEY) servers.events = eventsServer;
   // if (process.env.WIKIPEDIA_ACCESS_TOKEN) servers.wikipedia = wikipediaServer;
 

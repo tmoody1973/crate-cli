@@ -60,6 +60,19 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Fetching full release details from Discogs...";
     case "get_marketplace_stats":
       return "Fetching marketplace pricing from Discogs...";
+    // Genius tools
+    case "search_songs":
+      return `Searching Genius for "${input.query}"...`;
+    case "get_song":
+      return "Fetching song details from Genius...";
+    case "get_song_annotations":
+      return "Fetching song annotations from Genius...";
+    case "get_artist_genius":
+      return "Fetching artist profile from Genius...";
+    case "get_artist_songs_genius":
+      return "Fetching artist songs from Genius...";
+    case "get_annotation":
+      return "Fetching annotation details from Genius...";
     default:
       return `Using ${bare.replace(/_/g, " ")}...`;
   }

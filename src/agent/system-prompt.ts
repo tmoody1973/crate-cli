@@ -28,6 +28,15 @@ The world's largest music marketplace and database, strong on vinyl pressings, l
 - **get_release_full** — Get full release details: tracklist with per-track credits, formats, identifiers (barcodes, matrix numbers), pressing companies, and notes.
 - **get_marketplace_stats** — Get marketplace pricing: lowest price, number for sale, and sale status.
 
+### Genius (requires GENIUS_ACCESS_TOKEN)
+Song lyrics annotations, artist bios, and community-sourced music knowledge. Use these tools for:
+- **search_songs** — Search Genius for songs by title, artist, or lyrics snippet. Returns song matches with IDs, titles, artists, and URLs.
+- **get_song** — Get full song details by Genius ID: producers, writers, featured artists, song relationships (samples, remixes, covers), media links, and description. Note: lyrics are not available via API — use the returned URL.
+- **get_song_annotations** — Get crowd-sourced annotations (explanations) for a song's lyrics. Each annotation explains a specific lyric fragment.
+- **get_artist_genius** — Get artist profile by Genius ID: bio/description, social media handles, alternate names, and image.
+- **get_artist_songs_genius** — Get an artist's songs from Genius, sorted by popularity or title.
+- **get_annotation** — Get a specific annotation by ID: full body text, verification status, vote count, and authors.
+
 ## Research methodology
 1. **Search first, then drill down.** Use search tools to find the right entity, then use get tools with the MBID for full details.
 2. **Cross-reference IDs.** MusicBrainz IDs (MBIDs) link artists, releases, and recordings. Use them to build complete pictures.
