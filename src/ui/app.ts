@@ -73,6 +73,23 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Fetching artist songs from Genius...";
     case "get_annotation":
       return "Fetching annotation details from Genius...";
+    // Last.fm tools
+    case "get_artist_info":
+      return `Looking up Last.fm stats for "${input.artist}"...`;
+    case "get_album_info":
+      return `Looking up Last.fm stats for "${input.album}" by ${input.artist}...`;
+    case "get_track_info":
+      return `Looking up Last.fm stats for "${input.track}" by ${input.artist}...`;
+    case "get_similar_artists":
+      return `Finding artists similar to "${input.artist}" on Last.fm...`;
+    case "get_similar_tracks":
+      return `Finding tracks similar to "${input.track}" on Last.fm...`;
+    case "get_top_tracks":
+      return `Fetching top tracks for "${input.artist}" from Last.fm...`;
+    case "get_tag_artists":
+      return `Fetching top "${input.tag}" artists from Last.fm...`;
+    case "get_geo_top_tracks":
+      return `Fetching top tracks in ${input.country} from Last.fm...`;
     default:
       return `Using ${bare.replace(/_/g, " ")}...`;
   }

@@ -37,6 +37,17 @@ Song lyrics annotations, artist bios, and community-sourced music knowledge. Use
 - **get_artist_songs_genius** — Get an artist's songs from Genius, sorted by popularity or title.
 - **get_annotation** — Get a specific annotation by ID: full body text, verification status, vote count, and authors.
 
+### Last.fm (requires LASTFM_API_KEY)
+Listener statistics, play counts, similarity data, and community-driven tagging. The best source for understanding how music is actually consumed. Use these tools for:
+- **get_artist_info** — Get Last.fm artist stats: global listener and play counts, community tags, similar artists, and bio. Optionally include a username to see personal play count.
+- **get_album_info** — Get Last.fm album stats: global listener and play counts, tracklist with durations, community tags, and wiki.
+- **get_track_info** — Get Last.fm track stats: global listener and play counts, duration, community tags, album info, and wiki. Optionally include a username to see personal play count and loved status.
+- **get_similar_artists** — Get artists similar to a given artist, with numeric match scores (0-1) based on listener behavior. Great for mapping sonic connections.
+- **get_similar_tracks** — Get tracks similar to a given track, with match scores based on listener behavior. Useful for building playlists.
+- **get_top_tracks** — Get an artist's most popular tracks ranked by play count from actual scrobble data.
+- **get_tag_artists** — Get top artists for a genre, mood, or scene tag. Uses community-driven folksonomy — supports micro-genres, moods, eras, and scenes (e.g., 'shoegaze', 'dark ambient', 'protest music').
+- **get_geo_top_tracks** — Get the most popular tracks in a specific country based on scrobble data.
+
 ## Research methodology
 1. **Search first, then drill down.** Use search tools to find the right entity, then use get tools with the MBID for full details.
 2. **Cross-reference IDs.** MusicBrainz IDs (MBIDs) link artists, releases, and recordings. Use them to build complete pictures.
