@@ -15,7 +15,7 @@ describe("config", () => {
   it("returns default model when none specified", async () => {
     const { getConfig } = await import("../src/utils/config.js");
     const config = getConfig();
-    expect(config.defaultModel).toBe("claude-sonnet-4-6");
+    expect(config.defaultModel).toBe("claude-haiku-4-5-20251001");
   });
 
   it("detects available API keys", async () => {

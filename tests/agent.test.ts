@@ -9,10 +9,10 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
 }));
 
 describe("CrateAgent", () => {
-  it("defaults to sonnet model", async () => {
+  it("defaults to haiku model", async () => {
     const { CrateAgent } = await import("../src/agent/index.js");
     const agent = new CrateAgent();
-    expect(agent.activeModel).toBe("claude-sonnet-4-6");
+    expect(agent.activeModel).toBe("claude-haiku-4-5-20251001");
   });
 
   it("accepts a model in constructor", async () => {

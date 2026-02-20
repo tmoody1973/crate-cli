@@ -19,6 +19,33 @@ function addChildBeforeEditor(tui: TUI, child: any): void {
   children.splice(children.length - 1, 0, child);
 }
 
+/** Map MCP tool names to friendly progress messages */
+function getToolProgressMessage(toolName: string, input: Record<string, any>): string {
+  // Strip mcp__<server>__ prefix to get the bare tool name
+  const bare = toolName.replace(/^mcp__[^_]+__/, "");
+
+  switch (bare) {
+    case "search_artist":
+      return `Searching for artist "${input.query}"...`;
+    case "get_artist":
+      return "Fetching artist details...";
+    case "search_release":
+      return input.artist
+        ? `Searching releases by ${input.artist}...`
+        : `Searching for "${input.query}"...`;
+    case "get_release":
+      return "Fetching release details...";
+    case "search_recording":
+      return input.artist
+        ? `Searching tracks by ${input.artist}...`
+        : `Searching for "${input.query}"...`;
+    case "get_recording_credits":
+      return "Fetching recording credits...";
+    default:
+      return `Using ${bare.replace(/_/g, " ")}...`;
+  }
+}
+
 function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): void {
   const parts = input.slice(1).split(/\s+/);
   const command = parts[0]?.toLowerCase();
@@ -163,6 +190,12 @@ export function createApp(agent: CrateAgent): TUI {
           if (!content) continue;
 
           for (const block of content) {
+            // Update loader with tool call progress
+            if (block.type === "tool_use" && !loaderRemoved) {
+              const progressMsg = getToolProgressMessage(block.name, block.input ?? {});
+              loader.setMessage(progressMsg);
+            }
+
             if (block.type === "text" && block.text) {
               if (!loaderRemoved) {
                 tui.removeChild(loader);
