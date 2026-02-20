@@ -73,6 +73,13 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Fetching artist songs from Genius...";
     case "get_annotation":
       return "Fetching annotation details from Genius...";
+    // Wikipedia tools
+    case "search_articles":
+      return `Searching Wikipedia for "${input.query}"...`;
+    case "get_summary":
+      return `Getting Wikipedia summary for "${input.title}"...`;
+    case "get_article":
+      return `Reading full Wikipedia article for "${input.title}"...`;
     // Last.fm tools
     case "get_artist_info":
       return `Looking up Last.fm stats for "${input.artist}"...`;

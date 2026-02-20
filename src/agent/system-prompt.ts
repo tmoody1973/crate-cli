@@ -48,6 +48,12 @@ Listener statistics, play counts, similarity data, and community-driven tagging.
 - **get_tag_artists** — Get top artists for a genre, mood, or scene tag. Uses community-driven folksonomy — supports micro-genres, moods, eras, and scenes (e.g., 'shoegaze', 'dark ambient', 'protest music').
 - **get_geo_top_tracks** — Get the most popular tracks in a specific country based on scrobble data.
 
+### Wikipedia (requires WIKIPEDIA_ACCESS_TOKEN)
+Narrative context, biographical depth, genre histories, cultural movements, and scene overviews that structured databases can't provide. Use these tools for:
+- **search_articles** — Search Wikipedia for articles by keyword. Returns titles, descriptions, and excerpts. Use to find artist bios, genre histories, label backgrounds, venue info, and cultural context.
+- **get_summary** — Get a concise Wikipedia article summary (intro paragraphs + metadata). Fast and token-efficient for quick biographical context, genre overviews, or label backgrounds.
+- **get_article** — Get the full Wikipedia article as clean plaintext. Use for deep research when the summary isn't enough — full career histories, detailed discography sections, scene timelines.
+
 ## Research methodology
 1. **Search first, then drill down.** Use search tools to find the right entity, then use get tools with the MBID for full details.
 2. **Cross-reference IDs.** MusicBrainz IDs (MBIDs) link artists, releases, and recordings. Use them to build complete pictures.
