@@ -84,4 +84,72 @@ describe("bandcamp", () => {
       expect(result).toBeNull();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // searchBandcampHandler
+  // -------------------------------------------------------------------------
+  describe("searchBandcampHandler", () => {
+    it("returns parsed search results", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `
+          <div class="result-items">
+            <li class="searchresult band">
+              <div class="result-info">
+                <div class="heading"><a href="https://artist.bandcamp.com">Test Artist</a></div>
+                <div class="subhead">band</div>
+                <div class="itemurl"><a href="https://artist.bandcamp.com">artist.bandcamp.com</a></div>
+                <div class="tags">electronic, ambient</div>
+                <div class="location">Portland, Oregon</div>
+              </div>
+              <div class="art"><img src="https://f4.bcbits.com/img/123.jpg"></div>
+            </li>
+            <li class="searchresult album">
+              <div class="result-info">
+                <div class="heading"><a href="https://artist.bandcamp.com/album/test">Test Album</a></div>
+                <div class="subhead">by Test Artist</div>
+                <div class="itemurl"><a href="https://artist.bandcamp.com/album/test">artist.bandcamp.com</a></div>
+                <div class="tags">electronic</div>
+              </div>
+              <div class="art"><img src="https://f4.bcbits.com/img/456.jpg"></div>
+            </li>
+          </div>
+        `,
+      });
+
+      const { searchBandcampHandler } = await import("../src/servers/bandcamp.js");
+      const result = await searchBandcampHandler({ query: "test artist" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.query).toBe("test artist");
+      expect(data.result_count).toBe(2);
+      expect(data.results[0].type).toBe("artist");
+      expect(data.results[0].name).toBe("Test Artist");
+      expect(data.results[0].url).toBe("https://artist.bandcamp.com");
+      expect(data.results[1].type).toBe("album");
+      expect(data.results[1].artist).toBe("Test Artist");
+    });
+
+    it("handles item_type filter in URL", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `<div class="result-items"></div>`,
+      });
+
+      const { searchBandcampHandler } = await import("../src/servers/bandcamp.js");
+      await searchBandcampHandler({ query: "test", item_type: "album" });
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain("item_type=a");
+    });
+
+    it("returns error on fetch failure", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      const { searchBandcampHandler } = await import("../src/servers/bandcamp.js");
+      const result = await searchBandcampHandler({ query: "test" });
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toBeDefined();
+    });
+  });
 });

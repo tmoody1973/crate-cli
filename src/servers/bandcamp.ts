@@ -12,6 +12,7 @@
 
 import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
+import * as cheerio from "cheerio";
 
 const USER_AGENT = "Crate/1.0 (music-research-agent)";
 
@@ -92,11 +93,113 @@ export function extractTralbum(html: string): any | null {
 }
 
 // ---------------------------------------------------------------------------
-// Server export (tools added in subsequent tasks)
+// Type mapping for search item_type parameter
+// ---------------------------------------------------------------------------
+
+const ITEM_TYPE_MAP: Record<string, string> = {
+  artist: "b",
+  album: "a",
+  track: "t",
+  label: "b", // labels use same code as bands
+};
+
+// ---------------------------------------------------------------------------
+// search_bandcamp handler
+// ---------------------------------------------------------------------------
+
+export async function searchBandcampHandler(args: {
+  query: string;
+  item_type?: "artist" | "album" | "track" | "label";
+}) {
+  try {
+    let url = `https://bandcamp.com/search?q=${encodeURIComponent(args.query)}`;
+    if (args.item_type && ITEM_TYPE_MAP[args.item_type]) {
+      url += `&item_type=${ITEM_TYPE_MAP[args.item_type]}`;
+    }
+
+    const html = await bandcampFetch(url);
+    if (!html) throw new Error("Failed to fetch Bandcamp search results");
+
+    const $ = cheerio.load(html);
+    const results: any[] = [];
+
+    $(".searchresult").each((_, el) => {
+      const $el = $(el);
+      const classes = $el.attr("class") ?? "";
+
+      let type: string = "unknown";
+      if (classes.includes("band")) type = "artist";
+      else if (classes.includes("album")) type = "album";
+      else if (classes.includes("track")) type = "track";
+      else if (classes.includes("label")) type = "label";
+
+      const name = $el.find(".heading a").text().trim();
+      const itemUrl = $el.find(".heading a").attr("href") ?? "";
+      const subhead = $el.find(".subhead").text().trim();
+      const tagsText = $el.find(".tags").text().trim();
+      const location = $el.find(".location").text().trim() || undefined;
+      const imageUrl = $el.find(".art img").attr("src") || undefined;
+
+      // Parse "by Artist" from subhead for albums/tracks
+      let artist: string | undefined;
+      let album: string | undefined;
+      if (type === "album" || type === "track") {
+        const byMatch = subhead.match(/^by\s+(.+)/i);
+        if (byMatch) artist = byMatch[1]?.trim();
+      }
+      if (type === "track") {
+        const fromMatch = subhead.match(/from\s+(.+)/i);
+        if (fromMatch) album = fromMatch[1]?.trim();
+      }
+
+      const tags = tagsText
+        ? tagsText.replace(/^tags:\s*/i, "").split(",").map((t: string) => t.trim()).filter(Boolean)
+        : undefined;
+
+      results.push({
+        type,
+        name,
+        url: itemUrl,
+        ...(artist && { artist }),
+        ...(album && { album }),
+        ...(imageUrl && { image_url: imageUrl }),
+        ...(tags && tags.length > 0 && { tags }),
+        ...(location && { location }),
+      });
+    });
+
+    return toolResult({
+      query: args.query,
+      item_type: args.item_type ?? "all",
+      result_count: results.length,
+      results,
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
+const searchBandcamp = tool(
+  "search_bandcamp",
+  "Search Bandcamp for artists, albums, tracks, or labels. " +
+    "Returns names, URLs, tags, and locations. " +
+    "Use for finding independent artists and releases on Bandcamp.",
+  {
+    query: z.string().describe("Search terms (e.g. 'Boards of Canada', 'lo-fi hip hop')"),
+    item_type: z
+      .enum(["artist", "album", "track", "label"])
+      .optional()
+      .describe("Filter by type (default: all types)"),
+  },
+  searchBandcampHandler,
+);
+
+// ---------------------------------------------------------------------------
+// Server export
 // ---------------------------------------------------------------------------
 
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [],
+  tools: [searchBandcamp],
 });
