@@ -105,6 +105,14 @@ const ITEM_TYPE_MAP: Record<string, string> = {
   label: "b", // labels use same code as bands
 };
 
+const DISCOVER_URL = "https://bandcamp.com/api/discover/1/discover_web";
+
+const SORT_MAP: Record<string, string> = {
+  top: "pop",
+  new: "date",
+  rec: "rec",
+};
+
 // ---------------------------------------------------------------------------
 // search_bandcamp handler
 // ---------------------------------------------------------------------------
@@ -360,7 +368,67 @@ const getAlbum = tool(
   getAlbumHandler,
 );
 
+// ---------------------------------------------------------------------------
+// discover_music handler
+// ---------------------------------------------------------------------------
 
+export async function discoverMusicHandler(args: {
+  tag: string;
+  sort?: "top" | "new" | "rec";
+  format?: "vinyl" | "cd" | "cassette" | "digital";
+  location?: number;
+}) {
+  try {
+    const sort = SORT_MAP[args.sort ?? "top"] ?? "pop";
+    let url = `${DISCOVER_URL}?tag=${encodeURIComponent(args.tag)}&sort=${sort}`;
+    if (args.format) url += `&format=${encodeURIComponent(args.format)}`;
+    if (args.location) url += `&geoname_id=${args.location}`;
+
+    const body = await bandcampFetch(url);
+    if (!body) throw new Error(`Failed to fetch Bandcamp discover results for tag: ${args.tag}`);
+
+    const json = JSON.parse(body);
+    const items = (json.items ?? []).map((item: any) => {
+      const hints = item.url_hints ?? {};
+      const subdomain = hints.custom_domain ?? `${hints.slug}.bandcamp.com`;
+      const itemUrl = hints.item_type === "a"
+        ? `https://${subdomain}/album/${hints.item_slug}`
+        : `https://${subdomain}/track/${hints.item_slug}`;
+
+      return {
+        title: item.primary_text,
+        artist: item.secondary_text,
+        url: itemUrl,
+        ...(item.art_id && { art_url: `https://f4.bcbits.com/img/a${item.art_id}_0.jpg` }),
+        ...(item.genre_text && { genre: item.genre_text }),
+        ...(item.release_date && { release_date: item.release_date }),
+      };
+    });
+
+    return toolResult({
+      tag: args.tag,
+      sort: args.sort ?? "top",
+      result_count: items.length,
+      items,
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
+const discoverMusic = tool(
+  "discover_music",
+  "Browse Bandcamp's discovery system by genre/tag. " +
+    "Returns trending and new releases for a tag with optional sort and format filters. " +
+    "Great for finding new independent music by genre.",
+  {
+    tag: z.string().describe("Genre tag (e.g. 'ambient', 'hip-hop-rap', 'post-punk')"),
+    sort: z.enum(["top", "new", "rec"]).optional().describe("Sort order (default: top)"),
+    format: z.enum(["vinyl", "cd", "cassette", "digital"]).optional().describe("Physical format filter"),
+    location: z.number().optional().describe("GeoNames ID for location filter"),
+  },
+  discoverMusicHandler,
+);
 
 // ---------------------------------------------------------------------------
 // Server export
@@ -369,5 +437,5 @@ const getAlbum = tool(
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [searchBandcamp, getArtistPage, getAlbum],
+  tools: [searchBandcamp, getArtistPage, getAlbum, discoverMusic],
 });

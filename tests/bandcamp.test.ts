@@ -309,4 +309,59 @@ describe("bandcamp", () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // discoverMusicHandler
+  // -------------------------------------------------------------------------
+  describe("discoverMusicHandler", () => {
+    it("returns discover results from internal API", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({
+          items: [
+            {
+              primary_text: "Ambient Album",
+              secondary_text: "Ambient Artist",
+              url_hints: { custom_domain: null, slug: "ambient-artist", item_type: "a", item_slug: "ambient-album" },
+              art_id: 555,
+              genre_text: "ambient",
+              release_date: "01 Feb 2024 00:00:00 GMT",
+            },
+          ],
+        }),
+      });
+
+      const { discoverMusicHandler } = await import("../src/servers/bandcamp.js");
+      const result = await discoverMusicHandler({ tag: "ambient" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.tag).toBe("ambient");
+      expect(data.result_count).toBe(1);
+      expect(data.items[0].title).toBe("Ambient Album");
+      expect(data.items[0].artist).toBe("Ambient Artist");
+    });
+
+    it("passes sort and format parameters", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({ items: [] }),
+      });
+
+      const { discoverMusicHandler } = await import("../src/servers/bandcamp.js");
+      await discoverMusicHandler({ tag: "electronic", sort: "new", format: "vinyl" });
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain("sort=date");
+      expect(calledUrl).toContain("format=vinyl");
+    });
+
+    it("returns error on fetch failure", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      const { discoverMusicHandler } = await import("../src/servers/bandcamp.js");
+      const result = await discoverMusicHandler({ tag: "electronic" });
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toBeDefined();
+    });
+  });
+
 });
