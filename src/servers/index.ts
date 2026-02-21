@@ -4,6 +4,7 @@ import { discogsServer } from "./discogs.js";
 import { geniusServer } from "./genius.js";
 import { lastfmServer } from "./lastfm.js";
 import { wikipediaServer } from "./wikipedia.js";
+import { bandcampServer } from "./bandcamp.js";
 
 export function getActiveServers(): Record<string, any> {
   const servers: Record<string, any> = {
@@ -20,6 +21,7 @@ export function getActiveServers(): Record<string, any> {
   if (process.env.GENIUS_ACCESS_TOKEN) servers.genius = geniusServer;
   // if (process.env.TICKETMASTER_API_KEY) servers.events = eventsServer;
   servers.wikipedia = wikipediaServer; // Always available (free endpoints; Enterprise optional)
+  servers.bandcamp = bandcampServer; // Always available (no API key required)
 
   return servers;
 }
@@ -32,7 +34,7 @@ export function getServerStatus(): { active: string[]; inactive: string[] } {
   const active = Object.keys(getActiveServers());
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
-    "spotify", "genius", "events", "wikipedia",
+    "spotify", "genius", "events", "wikipedia", "bandcamp",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };
