@@ -48,6 +48,14 @@ Listener statistics, play counts, similarity data, and community-driven tagging.
 - **get_tag_artists** — Get top artists for a genre, mood, or scene tag. Uses community-driven folksonomy — supports micro-genres, moods, eras, and scenes (e.g., 'shoegaze', 'dark ambient', 'protest music').
 - **get_geo_top_tracks** — Get the most popular tracks in a specific country based on scrobble data.
 
+### Bandcamp (always available, no API key)
+Direct access to Bandcamp — the largest independent music marketplace. Strong on independent artists, vinyl/cassette releases, genre tags, and pricing. Use these tools for:
+- **search_bandcamp** — Search for artists, albums, tracks, or labels on Bandcamp.
+- **get_artist_page** — Get artist/label profile: bio, location, discography, and recent releases.
+- **get_album** — Get full album details: tracklist with durations, tags, credits, label, and pricing.
+- **discover_music** — Browse Bandcamp's discovery by genre tag with sort and format filters.
+- **get_tag_info** — Get genre/tag info: description and related tags.
+
 ### Wikipedia (always available, no API key)
 Narrative context, biographical depth, genre histories, cultural movements, and scene overviews that structured databases can't provide. Uses free public Wikipedia endpoints. When Wikimedia Enterprise credentials are configured (WIKIMEDIA_USERNAME/PASSWORD), article content is richer. Use these tools for:
 - **search_articles** — Search Wikipedia for articles by keyword. Returns titles, descriptions, and excerpts. Use to find artist bios, genre histories, label backgrounds, venue info, and cultural context.
