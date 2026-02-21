@@ -245,4 +245,68 @@ describe("bandcamp", () => {
     });
   });
 
+
+  // -------------------------------------------------------------------------
+  // getAlbumHandler
+  // -------------------------------------------------------------------------
+  describe("getAlbumHandler", () => {
+    it("returns album details with tracklist", async () => {
+      const pagedata = encodeURIComponent(JSON.stringify({
+        current: {
+          title: "Test Album",
+          artist: "Test Artist",
+          about: "A great album.",
+          credits: "Produced by Test Artist",
+          release_date: "01 Mar 2024 00:00:00 GMT",
+          minimum_price: 7.0,
+          currency: "USD",
+        },
+        art_id: 999,
+        album_release_date: "01 Mar 2024 00:00:00 GMT",
+      }));
+
+      const tralbum = JSON.stringify({
+        trackinfo: [
+          { track_num: 1, title: "Intro", duration: 62.5, artist: null },
+          { track_num: 2, title: "Main Track", duration: 245.8, artist: "Featured Artist" },
+        ],
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          `<div id="pagedata" data-blob="${pagedata}"></div>
+           <script data-tralbum='${tralbum}'></script>
+           <a class="tag" href="/tag/electronic">electronic</a>
+           <a class="tag" href="/tag/ambient">ambient</a>
+           <span class="label"><a href="https://label.bandcamp.com">Cool Label</a></span>`,
+      });
+
+      const { getAlbumHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getAlbumHandler({ url: "https://artist.bandcamp.com/album/test" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.title).toBe("Test Album");
+      expect(data.artist).toBe("Test Artist");
+      expect(data.about).toBe("A great album.");
+      expect(data.credits).toBe("Produced by Test Artist");
+      expect(data.tracks).toHaveLength(2);
+      expect(data.tracks[0].number).toBe(1);
+      expect(data.tracks[0].title).toBe("Intro");
+      expect(data.tracks[0].duration_seconds).toBeCloseTo(62.5);
+      expect(data.tracks[0].duration_formatted).toBe("1:03");
+      expect(data.tracks[1].artist).toBe("Featured Artist");
+      expect(data.price).toEqual({ amount: 7.0, currency: "USD" });
+    });
+
+    it("returns error on fetch failure", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+      const { getAlbumHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getAlbumHandler({ url: "https://artist.bandcamp.com/album/bad" });
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toBeDefined();
+    });
+  });
+
 });

@@ -109,6 +109,17 @@ const ITEM_TYPE_MAP: Record<string, string> = {
 // search_bandcamp handler
 // ---------------------------------------------------------------------------
 
+
+// ---------------------------------------------------------------------------
+// Duration formatter
+// ---------------------------------------------------------------------------
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
 export async function searchBandcampHandler(args: {
   query: string;
   item_type?: "artist" | "album" | "track" | "label";
@@ -277,6 +288,78 @@ const getArtistPage = tool(
   getArtistPageHandler,
 );
 
+// ---------------------------------------------------------------------------
+// get_album handler
+// ---------------------------------------------------------------------------
+
+export async function getAlbumHandler(args: { url: string }) {
+  try {
+    const html = await bandcampFetch(args.url);
+    if (!html) throw new Error(`Failed to fetch album page: ${args.url}`);
+
+    const pagedata = extractPagedata(html);
+    const tralbum = extractTralbum(html);
+    const $ = cheerio.load(html);
+
+    const current = pagedata?.current ?? {};
+    const title = current.title ?? $("meta[property='og:title']").attr("content") ?? "Unknown";
+    const artist = current.artist ?? $("meta[property='og:site_name']").attr("content") ?? "Unknown";
+
+    const tags: string[] = [];
+    $("a.tag").each((_, el) => {
+      const tag = $(el).text().trim();
+      if (tag) tags.push(tag);
+    });
+
+    const label = $(".label a").first().text().trim() || undefined;
+    const artUrl = pagedata?.art_id
+      ? `https://f4.bcbits.com/img/a${pagedata.art_id}_0.jpg`
+      : undefined;
+
+    const tracks = (tralbum?.trackinfo ?? []).map((t: any) => ({
+      number: t.track_num,
+      title: t.title,
+      ...(t.duration != null && {
+        duration_seconds: t.duration,
+        duration_formatted: formatDuration(t.duration),
+      }),
+      ...(t.artist && { artist: t.artist }),
+    }));
+
+    const price =
+      current.minimum_price != null && current.currency
+        ? { amount: current.minimum_price, currency: current.currency }
+        : undefined;
+
+    return toolResult({
+      title,
+      artist,
+      url: args.url,
+      ...(current.release_date && { release_date: current.release_date }),
+      ...(artUrl && { art_url: artUrl }),
+      ...(current.about && { about: current.about }),
+      ...(current.credits && { credits: current.credits }),
+      tags,
+      ...(label && { label }),
+      ...(price && { price }),
+      tracks,
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
+const getAlbum = tool(
+  "get_album",
+  "Get full album details from a Bandcamp album page. " +
+    "Returns tracklist with durations, tags, credits, label, and pricing. " +
+    "Requires the album's Bandcamp URL.",
+  {
+    url: z.string().url().describe("Album URL (e.g. https://artist.bandcamp.com/album/title)"),
+  },
+  getAlbumHandler,
+);
+
 
 
 // ---------------------------------------------------------------------------
@@ -286,5 +369,5 @@ const getArtistPage = tool(
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [searchBandcamp, getArtistPage],
+  tools: [searchBandcamp, getArtistPage, getAlbum],
 });
