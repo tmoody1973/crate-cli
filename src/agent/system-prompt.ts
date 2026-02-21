@@ -57,6 +57,13 @@ Direct access to Bandcamp — the largest independent music marketplace. Strong 
 - **get_tag_info** — Get genre/tag info: description and related tags.
 - **get_bandcamp_editorial** — Browse or read Bandcamp Daily articles: reviews, features, interviews, lists. Returns article text and all referenced Bandcamp releases.
 
+### YouTube Player (always available, requires yt-dlp + mpv)
+Audio playback from YouTube. Enhanced search results when YOUTUBE_API_KEY is set. Use these tools for:
+- **search_tracks** — Search YouTube for music. Returns titles, URLs, channels, durations.
+- **play_track** — Play a track from YouTube via mpv. Accepts a search query or direct URL.
+- **play_playlist** — Play a list of tracks as a playlist via M3U, resolved by yt-dlp on the fly.
+- **player_control** — Control playback: pause, resume, next, previous, stop, now_playing, volume_up, volume_down, set_volume.
+
 ### Wikipedia (always available, no API key)
 Narrative context, biographical depth, genre histories, cultural movements, and scene overviews that structured databases can't provide. Uses free public Wikipedia endpoints. When Wikimedia Enterprise credentials are configured (WIKIMEDIA_USERNAME/PASSWORD), article content is richer. Use these tools for:
 - **search_articles** — Search Wikipedia for articles by keyword. Returns titles, descriptions, and excerpts. Use to find artist bios, genre histories, label backgrounds, venue info, and cultural context.

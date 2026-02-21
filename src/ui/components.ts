@@ -85,14 +85,31 @@ ${chalk.dim(DESCRIPTION)}
 
 ${chalk.dim("Type a question to start researching. Use /help for commands.")}`;
 
-export const HELP_TEXT = `${chalk.bold.cyan("Commands")}
+export const HELP_TEXT = `${chalk.bold.cyan("Crate — Music Research Agent")}
 
-${chalk.bold("Research")}
-  ${chalk.dim("Just type naturally — ask about artists, albums, credits, scenes.")}
+${chalk.bold("How to use")}
+  ${chalk.dim("Type naturally to research music. Crate searches MusicBrainz, Discogs,")}
+  ${chalk.dim("Genius, Wikipedia, Last.fm, Bandcamp, and YouTube to answer your questions.")}
+
+  ${chalk.dim("Examples:")}
+  ${chalk.dim("  \"Who produced Madvillainy?\"")}
+  ${chalk.dim("  \"Tell me about the label Stones Throw\"")}
+  ${chalk.dim("  \"Find similar artists to MF DOOM\"")}
+  ${chalk.dim("  \"Play some J Dilla instrumentals\"")}
+
+${chalk.bold("Player")}
+  ${chalk.cyan("/play")}${chalk.dim(" <query>")}   Play a track from YouTube
+  ${chalk.cyan("/pause")}           Toggle pause/resume
+  ${chalk.cyan("/next")}            Next track (playlist)
+  ${chalk.cyan("/prev")}            Previous track (playlist)
+  ${chalk.cyan("/stop")}            Stop playback
+  ${chalk.cyan("/vol")}${chalk.dim(" [0-150]")}    Set or show volume
+  ${chalk.cyan("/np")}              Now playing info
 
 ${chalk.bold("Session")}
-  ${chalk.cyan("/model")}${chalk.dim(" [name]")}  Show or switch model (sonnet, opus, haiku)
-  ${chalk.cyan("/cost")}           Show token usage and cost
-  ${chalk.cyan("/clear")}          Clear the screen
-  ${chalk.cyan("/help")}           Show this help
-  ${chalk.cyan("/quit")}           Exit Crate`;
+  ${chalk.cyan("/model")}${chalk.dim(" [name]")}   Show or switch model (sonnet, opus, haiku)
+  ${chalk.cyan("/cost")}            Show token usage and cost
+  ${chalk.cyan("/servers")}         Show active/inactive servers
+  ${chalk.cyan("/clear")}           Clear the screen
+  ${chalk.cyan("/help")}            Show this help
+  ${chalk.cyan("/quit")}            Exit Crate`;

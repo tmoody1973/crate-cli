@@ -13,6 +13,12 @@ import chalk from "chalk";
 import { CrateAgent } from "../agent/index.js";
 import { markdownTheme, editorTheme, WELCOME_TEXT, HELP_TEXT } from "./components.js";
 import { getServerStatus } from "../servers/index.js";
+import { NowPlayingBar, NowPlayingPoller } from "./now-playing.js";
+import {
+  isPlayerActive,
+  playerControlHandler,
+  playTrackHandler,
+} from "../servers/youtube.js";
 
 function addChildBeforeEditor(tui: TUI, child: any): void {
   const children = tui.children;
@@ -95,6 +101,15 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return input?.url
         ? "Reading Bandcamp Daily article..."
         : `Browsing Bandcamp Daily${input?.category ? ` ${input.category}` : ""}...`;
+    // YouTube tools
+    case "search_tracks":
+      return `Searching YouTube for "${input?.query ?? "music"}"...`;
+    case "play_track":
+      return input?.url ? "Playing track from YouTube..." : `Playing "${input?.query}"...`;
+    case "play_playlist":
+      return `Playing ${input?.tracks?.length ?? 0} tracks...`;
+    case "player_control":
+      return input?.action === "now_playing" ? "Checking what's playing..." : `Player: ${input?.action}...`;
     // Last.fm tools
     case "get_artist_info":
       return `Looking up Last.fm stats for "${input.artist}"...`;
@@ -117,7 +132,7 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
   }
 }
 
-function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): void {
+async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): Promise<void> {
   const parts = input.slice(1).split(/\s+/);
   const command = parts[0]?.toLowerCase();
   const arg = parts[1];
@@ -177,6 +192,110 @@ function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): void {
       tui.requestRender();
       break;
     }
+    // Player controls
+    case "pause":
+    case "pp": {
+      if (!isPlayerActive()) {
+        addChildBeforeEditor(tui, new Text(chalk.dim("No track playing."), 1, 0));
+      } else {
+        const result = await playerControlHandler({ action: "toggle_pause" });
+        const data = JSON.parse(result.content[0].text);
+        const icon = data.status === "paused" ? chalk.yellow("▐▐") : chalk.green("▶");
+        addChildBeforeEditor(tui, new Text(`${icon} ${chalk.dim(data.status)}`, 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "next": {
+      if (!isPlayerActive()) {
+        addChildBeforeEditor(tui, new Text(chalk.dim("No track playing."), 1, 0));
+      } else {
+        await playerControlHandler({ action: "next" });
+        addChildBeforeEditor(tui, new Text(chalk.dim("⏭ Next track"), 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "prev": {
+      if (!isPlayerActive()) {
+        addChildBeforeEditor(tui, new Text(chalk.dim("No track playing."), 1, 0));
+      } else {
+        await playerControlHandler({ action: "previous" });
+        addChildBeforeEditor(tui, new Text(chalk.dim("⏮ Previous track"), 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "stop": {
+      if (!isPlayerActive()) {
+        addChildBeforeEditor(tui, new Text(chalk.dim("No track playing."), 1, 0));
+      } else {
+        await playerControlHandler({ action: "stop" });
+        addChildBeforeEditor(tui, new Text(chalk.dim("⏹ Stopped"), 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "vol": {
+      if (!isPlayerActive()) {
+        addChildBeforeEditor(tui, new Text(chalk.dim("No track playing."), 1, 0));
+      } else if (arg) {
+        const vol = parseInt(arg, 10);
+        if (isNaN(vol) || vol < 0 || vol > 150) {
+          addChildBeforeEditor(tui, new Text(chalk.yellow("Volume must be 0-150."), 1, 0));
+        } else {
+          await playerControlHandler({ action: "set_volume", volume: vol });
+          addChildBeforeEditor(tui, new Text(chalk.dim(`🔊 Volume: ${vol}`), 1, 0));
+        }
+      } else {
+        const result = await playerControlHandler({ action: "now_playing" });
+        const data = JSON.parse(result.content[0].text);
+        addChildBeforeEditor(tui, new Text(chalk.dim(`🔊 Volume: ${data.volume ?? "unknown"}`), 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "np": {
+      if (!isPlayerActive()) {
+        addChildBeforeEditor(tui, new Text(chalk.dim("No track playing."), 1, 0));
+      } else {
+        const result = await playerControlHandler({ action: "now_playing" });
+        const data = JSON.parse(result.content[0].text);
+        const icon = data.status === "paused" ? chalk.yellow("▐▐") : chalk.green("▶");
+        const title = data.track?.title ?? data.media_title ?? "Unknown";
+        const channel = data.track?.channel ? chalk.dim(` · ${data.track.channel}`) : "";
+        const time = data.position && data.duration ? chalk.dim(` ${data.position} / ${data.duration}`) : "";
+        addChildBeforeEditor(tui, new Text(`${icon} ${title}${channel}${time}`, 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "play": {
+      const query = parts.slice(1).join(" ").trim();
+      if (!query) {
+        addChildBeforeEditor(tui, new Text(chalk.yellow("Usage: /play <song or artist>"), 1, 0));
+        tui.requestRender();
+        break;
+      }
+      addChildBeforeEditor(tui, new Text(chalk.dim(`🔍 Searching "${query}"...`), 1, 0));
+      tui.requestRender();
+      try {
+        const result = await playTrackHandler({ query });
+        const data = JSON.parse(result.content[0].text);
+        if (data.error) {
+          addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${data.error}`), 1, 0));
+        } else {
+          const channel = data.channel ? chalk.dim(` · ${data.channel}`) : "";
+          const dur = data.duration ? chalk.dim(` (${data.duration})`) : "";
+          addChildBeforeEditor(tui, new Text(`${chalk.green("▶")} ${data.title}${channel}${dur}`, 1, 0));
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to play track";
+        addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${msg}`), 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
     case "quit":
     case "exit": {
       tui.stop();
@@ -205,6 +324,15 @@ export function createApp(agent: CrateAgent): TUI {
 
   // Slash command autocomplete
   const slashCommands: SlashCommand[] = [
+    // Player
+    { name: "play", description: "Play a track (/play <query>)" },
+    { name: "pause", description: "Toggle pause/resume" },
+    { name: "next", description: "Next track (playlist)" },
+    { name: "prev", description: "Previous track (playlist)" },
+    { name: "stop", description: "Stop playback" },
+    { name: "vol", description: "Set or show volume (/vol [0-150])" },
+    { name: "np", description: "Now playing info" },
+    // Session
     { name: "help", description: "Show available commands" },
     { name: "model", description: "Show or switch model (sonnet, opus, haiku)" },
     { name: "cost", description: "Show token usage and cost" },
@@ -226,7 +354,7 @@ export function createApp(agent: CrateAgent): TUI {
 
     // Handle slash commands locally
     if (trimmed.startsWith("/")) {
-      handleSlashCommand(tui, agent, trimmed);
+      await handleSlashCommand(tui, agent, trimmed);
       return;
     }
 
@@ -300,6 +428,11 @@ export function createApp(agent: CrateAgent): TUI {
     editor.disableSubmit = false;
     tui.requestRender();
   };
+
+  // Now-playing bar (polls mpv, auto-shows/hides)
+  const nowPlayingBar = new NowPlayingBar();
+  const nowPlayingPoller = new NowPlayingPoller(tui, nowPlayingBar);
+  nowPlayingPoller.start();
 
   tui.addChild(editor);
   tui.setFocus(editor);
