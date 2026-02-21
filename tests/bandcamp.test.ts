@@ -458,4 +458,190 @@ describe("bandcamp", () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // getBandcampEditorialHandler
+  // -------------------------------------------------------------------------
+  describe("getBandcampEditorialHandler", () => {
+    it("returns articles from RSS feed in browse mode", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `<?xml version="1.0"?>
+          <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <title>Bandcamp Daily</title>
+              <item>
+                <title>The Best Ambient of 2024</title>
+                <link>https://daily.bandcamp.com/lists/best-ambient-2024</link>
+                <pubDate>Mon, 15 Jan 2024 00:00:00 GMT</pubDate>
+                <dc:creator>Andrew Jervis</dc:creator>
+                <category>Lists</category>
+              </item>
+              <item>
+                <title>Scene Report: Tokyo Underground</title>
+                <link>https://daily.bandcamp.com/scene-report/tokyo-underground</link>
+                <pubDate>Sun, 14 Jan 2024 00:00:00 GMT</pubDate>
+                <dc:creator>Casey Jarman</dc:creator>
+                <category>Scene Report</category>
+              </item>
+            </channel>
+          </rss>`,
+      });
+
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({});
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.source).toBe("Bandcamp Daily");
+      expect(data.article_count).toBe(2);
+      expect(data.articles[0].title).toBe("The Best Ambient of 2024");
+      expect(data.articles[0].author).toBe("Andrew Jervis");
+      expect(data.articles[1].title).toBe("Scene Report: Tokyo Underground");
+    });
+
+    it("filters articles by category in browse mode", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `<?xml version="1.0"?>
+          <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <item>
+                <title>Best Lists Article</title>
+                <link>https://daily.bandcamp.com/lists/best-ambient-2024</link>
+                <pubDate>Mon, 15 Jan 2024 00:00:00 GMT</pubDate>
+                <dc:creator>Author A</dc:creator>
+                <category>Lists</category>
+              </item>
+              <item>
+                <title>Feature Article</title>
+                <link>https://daily.bandcamp.com/features/some-feature</link>
+                <pubDate>Sun, 14 Jan 2024 00:00:00 GMT</pubDate>
+                <dc:creator>Author B</dc:creator>
+                <category>Features</category>
+              </item>
+            </channel>
+          </rss>`,
+      });
+
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({ category: "lists" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.category).toBe("lists");
+      expect(data.article_count).toBe(1);
+      expect(data.articles[0].title).toBe("Best Lists Article");
+    });
+
+    it("extracts article content and release links in read mode", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `
+          <html>
+          <head>
+            <meta property="og:title" content="The Best Ambient of 2024" />
+            <meta property="article:published_time" content="2024-01-15T00:00:00Z" />
+            <script type="application/ld+json">{"author":{"name":"Andrew Jervis"}}</script>
+          </head>
+          <article>
+            <p>This year saw incredible ambient releases.</p>
+            <p>First up is <a href="https://artist1.bandcamp.com/album/dreamscapes">Dreamscapes</a> by Artist One.</p>
+            <p>Also essential: <a href="https://artist2.bandcamp.com/album/deep-blue">Deep Blue</a>.</p>
+            <p>Don't miss <a href="https://artist3.bandcamp.com/track/horizon">Horizon</a> either.</p>
+          </article></html>`,
+      });
+
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({
+        url: "https://daily.bandcamp.com/lists/best-ambient-2024",
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.title).toBe("The Best Ambient of 2024");
+      expect(data.author).toBe("Andrew Jervis");
+      expect(data.date).toBe("2024-01-15T00:00:00Z");
+      expect(data.body_text).toContain("incredible ambient releases");
+      expect(data.release_count).toBe(3);
+      expect(data.releases[0].url).toBe("https://artist1.bandcamp.com/album/dreamscapes");
+      expect(data.releases[0].title).toBe("Dreamscapes");
+    });
+
+    it("extracts releases from player embeds", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `
+          <html><article>
+            <h1>Album of the Day: Night Visions</h1>
+            <p>A stunning debut from Aurora.</p>
+            <div class="mplayer">
+              <span class="mpalbuminfo">
+                <a class="mptralbum" href="https://aurora.bandcamp.com/album/night-visions">Night Visions</a>
+                <a class="mpartist" href="https://aurora.bandcamp.com">Aurora</a>
+              </span>
+            </div>
+          </article></html>`,
+      });
+
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({
+        url: "https://daily.bandcamp.com/album-of-the-day/night-visions",
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.releases).toHaveLength(1);
+      expect(data.releases[0].url).toBe("https://aurora.bandcamp.com/album/night-visions");
+      expect(data.releases[0].title).toBe("Night Visions");
+      expect(data.releases[0].artist).toBe("Aurora");
+    });
+
+    it("deduplicates releases by URL", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `
+          <html><article>
+            <h1>Feature</h1>
+            <p>Check out <a href="https://a.bandcamp.com/album/x">Album X</a>.</p>
+            <p>As mentioned, <a href="https://a.bandcamp.com/album/x">Album X by A</a> is great.</p>
+            <p>Also <a href="https://a.bandcamp.com/album/x?from=embed">Album X</a>.</p>
+          </article></html>`,
+      });
+
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({
+        url: "https://daily.bandcamp.com/features/test",
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.release_count).toBe(1);
+      expect(data.releases[0].url).toBe("https://a.bandcamp.com/album/x");
+    });
+
+    it("rejects non-Bandcamp-Daily URLs", async () => {
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({
+        url: "https://artist.bandcamp.com/album/something",
+      });
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toContain("daily.bandcamp.com");
+    });
+
+    it("returns error when RSS feed fetch fails", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({});
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toBeDefined();
+    });
+
+    it("returns error when article fetch fails", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+      const { getBandcampEditorialHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getBandcampEditorialHandler({
+        url: "https://daily.bandcamp.com/features/nonexistent",
+      });
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toBeDefined();
+    });
+  });
+
 });

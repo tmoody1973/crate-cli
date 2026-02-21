@@ -91,6 +91,10 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Browsing Bandcamp ${input?.tag ?? "music"} releases...`;
     case "get_tag_info":
       return `Looking up Bandcamp tag "${input?.tag ?? ""}"...`;
+    case "get_bandcamp_editorial":
+      return input?.url
+        ? "Reading Bandcamp Daily article..."
+        : `Browsing Bandcamp Daily${input?.category ? ` ${input.category}` : ""}...`;
     // Last.fm tools
     case "get_artist_info":
       return `Looking up Last.fm stats for "${input.artist}"...`;

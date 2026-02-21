@@ -517,11 +517,165 @@ const getTagInfo = tool(
 );
 
 // ---------------------------------------------------------------------------
+// get_bandcamp_editorial handler
+// ---------------------------------------------------------------------------
+
+const EDITORIAL_CATEGORIES = [
+  "features", "lists", "album-of-the-day", "essential-releases",
+  "big-ups", "scene-report", "label-profile", "the-merch-table",
+] as const;
+
+export async function getBandcampEditorialHandler(args: {
+  url?: string;
+  category?: string;
+}) {
+  try {
+    // Read mode: fetch and parse a specific article
+    if (args.url) {
+      if (!args.url.startsWith("https://daily.bandcamp.com/")) {
+        throw new Error("URL must be a Bandcamp Daily article (https://daily.bandcamp.com/...)");
+      }
+
+      const html = await bandcampFetch(args.url);
+      if (!html) throw new Error(`Failed to fetch article: ${args.url}`);
+
+      const $ = cheerio.load(html);
+
+      // Metadata — og:title and article:published_time are reliable;
+      // author lives in JSON-LD structured data
+      const title = $("meta[property='og:title']").attr("content")
+        || $("article h1").first().text().trim()
+        || "Unknown";
+      const date = $("meta[property='article:published_time']").attr("content")
+        || undefined;
+
+      let author: string | undefined;
+      try {
+        const ldJson = $("script[type='application/ld+json']").first().html();
+        if (ldJson) {
+          const ld = JSON.parse(ldJson);
+          author = ld.author?.name ?? undefined;
+        }
+      } catch { /* JSON-LD optional */ }
+
+      // Body text from article paragraphs
+      const paragraphs: string[] = [];
+      $("article p").each((_, el) => {
+        const text = $(el).text().trim();
+        if (text) paragraphs.push(text);
+      });
+      let bodyText = paragraphs.join("\n\n");
+      if (bodyText.length > 4000) {
+        bodyText = bodyText.slice(0, 4000) + " [truncated]";
+      }
+
+      // Extract referenced Bandcamp releases
+      const releaseMap = new Map<string, { url: string; title: string; artist?: string }>();
+
+      // From inline links
+      $("a[href*='bandcamp.com/album/'], a[href*='bandcamp.com/track/']").each((_, el) => {
+        const href = $(el).attr("href");
+        if (!href) return;
+        const cleanUrl = href.split("?")[0]?.split("#")[0] ?? href;
+        if (!releaseMap.has(cleanUrl)) {
+          releaseMap.set(cleanUrl, {
+            url: cleanUrl,
+            title: $(el).text().trim() || "Unknown",
+          });
+        }
+      });
+
+      // From player embeds — .mptralbum is an <a> with the album URL
+      $(".mpalbuminfo").each((_, el) => {
+        const $info = $(el);
+        const $tralbum = $info.find(".mptralbum");
+        const $artist = $info.find(".mpartist");
+        const albumTitle = $tralbum.text().trim();
+        const artistName = $artist.text().trim();
+        const albumUrl = $tralbum.attr("href")
+          ?? $info.closest("a[href*='bandcamp.com']").attr("href");
+
+        if (albumUrl) {
+          const cleanUrl = albumUrl.split("?")[0]?.split("#")[0] ?? albumUrl;
+          const existing = releaseMap.get(cleanUrl);
+          if (existing) {
+            // Player embed data is more structured — always prefer it
+            if (artistName) existing.artist = artistName;
+            if (albumTitle) existing.title = albumTitle;
+          } else {
+            releaseMap.set(cleanUrl, {
+              url: cleanUrl,
+              title: albumTitle || "Unknown",
+              ...(artistName && { artist: artistName }),
+            });
+          }
+        }
+      });
+
+      const releases = Array.from(releaseMap.values());
+
+      return toolResult({
+        title,
+        url: args.url,
+        ...(author && { author }),
+        ...(date && { date }),
+        body_text: bodyText,
+        releases,
+        release_count: releases.length,
+      });
+    }
+
+    // Browse mode: list recent articles from RSS feed
+    const feedHtml = await bandcampFetch("https://daily.bandcamp.com/feed");
+    if (!feedHtml) throw new Error("Failed to fetch Bandcamp Daily RSS feed");
+
+    const feed = await rssParser.parseString(feedHtml);
+    let articles = feed.items.map((item) => ({
+      title: item.title ?? "",
+      url: item.link ?? "",
+      date: item.isoDate ?? item.pubDate ?? "",
+      author: item.creator ?? undefined,
+      category: item.categories?.[0] ?? undefined,
+    }));
+
+    if (args.category) {
+      articles = articles.filter((a) =>
+        a.category?.toLowerCase() === args.category!.toLowerCase()
+        || a.url.includes(`/${args.category}/`)
+      );
+    }
+
+    return toolResult({
+      source: "Bandcamp Daily",
+      article_count: articles.length,
+      ...(args.category && { category: args.category }),
+      articles,
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
+const getBandcampEditorial = tool(
+  "get_bandcamp_editorial",
+  "Access Bandcamp Daily editorial content — album reviews, features, interviews, and curated lists. " +
+    "Without a URL: browse recent articles, optionally filtered by category. " +
+    "With a URL: read the full article with all referenced Bandcamp releases extracted.",
+  {
+    url: z.string().url().optional()
+      .describe("Bandcamp Daily article URL to read. Omit to browse recent articles."),
+    category: z.enum(EDITORIAL_CATEGORIES).optional()
+      .describe("Filter browse results by category (ignored when url is provided)"),
+  },
+  getBandcampEditorialHandler,
+);
+
+// ---------------------------------------------------------------------------
 // Server export
 // ---------------------------------------------------------------------------
 
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [searchBandcamp, getArtistPage, getAlbum, discoverMusic, getTagInfo],
+  tools: [searchBandcamp, getArtistPage, getAlbum, discoverMusic, getTagInfo, getBandcampEditorial],
 });

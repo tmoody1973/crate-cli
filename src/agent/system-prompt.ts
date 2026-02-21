@@ -55,6 +55,7 @@ Direct access to Bandcamp — the largest independent music marketplace. Strong 
 - **get_album** — Get full album details: tracklist with durations, tags, credits, label, and pricing.
 - **discover_music** — Browse Bandcamp's discovery by genre tag with sort and format filters.
 - **get_tag_info** — Get genre/tag info: description and related tags.
+- **get_bandcamp_editorial** — Browse or read Bandcamp Daily articles: reviews, features, interviews, lists. Returns article text and all referenced Bandcamp releases.
 
 ### Wikipedia (always available, no API key)
 Narrative context, biographical depth, genre histories, cultural movements, and scene overviews that structured databases can't provide. Uses free public Wikipedia endpoints. When Wikimedia Enterprise credentials are configured (WIKIMEDIA_USERNAME/PASSWORD), article content is richer. Use these tools for:
