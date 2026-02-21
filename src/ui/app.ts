@@ -80,6 +80,17 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Getting Wikipedia summary for "${input.title}"...`;
     case "get_article":
       return `Reading full Wikipedia article for "${input.title}"...`;
+    // Bandcamp tools
+    case "search_bandcamp":
+      return `Searching Bandcamp for "${input?.query ?? "music"}"...`;
+    case "get_artist_page":
+      return "Fetching Bandcamp artist page...";
+    case "get_album":
+      return "Fetching album details from Bandcamp...";
+    case "discover_music":
+      return `Browsing Bandcamp ${input?.tag ?? "music"} releases...`;
+    case "get_tag_info":
+      return `Looking up Bandcamp tag "${input?.tag ?? ""}"...`;
     // Last.fm tools
     case "get_artist_info":
       return `Looking up Last.fm stats for "${input.artist}"...`;
