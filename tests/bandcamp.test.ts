@@ -364,4 +364,44 @@ describe("bandcamp", () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // getTagInfoHandler
+  // -------------------------------------------------------------------------
+  describe("getTagInfoHandler", () => {
+    it("returns tag info with related tags", async () => {
+      const pagedata = encodeURIComponent(JSON.stringify({
+        hub: {
+          description: "Music that creates atmosphere and texture over rhythm.",
+          related_tags: [
+            { tag_norm_name: "drone" },
+            { tag_norm_name: "dark-ambient" },
+            { tag_norm_name: "experimental" },
+          ],
+        },
+      }));
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `<div id="pagedata" data-blob="${pagedata}"></div>`,
+      });
+
+      const { getTagInfoHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getTagInfoHandler({ tag: "ambient" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.tag).toBe("ambient");
+      expect(data.description).toBe("Music that creates atmosphere and texture over rhythm.");
+      expect(data.related_tags).toEqual(["drone", "dark-ambient", "experimental"]);
+    });
+
+    it("returns error on fetch failure", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+      const { getTagInfoHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getTagInfoHandler({ tag: "nonexistent" });
+      const data = JSON.parse(result.content[0].text);
+      expect(data.error).toBeDefined();
+    });
+  });
+
 });

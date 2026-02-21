@@ -431,11 +431,49 @@ const discoverMusic = tool(
 );
 
 // ---------------------------------------------------------------------------
+// get_tag_info handler
+// ---------------------------------------------------------------------------
+
+export async function getTagInfoHandler(args: { tag: string }) {
+  try {
+    const url = `https://bandcamp.com/tag/${encodeURIComponent(args.tag)}`;
+    const html = await bandcampFetch(url);
+    if (!html) throw new Error(`Failed to fetch tag page: ${args.tag}`);
+
+    const pagedata = extractPagedata(html);
+    const hub = pagedata?.hub ?? {};
+
+    const relatedTags = (hub.related_tags ?? [])
+      .map((t: any) => t.tag_norm_name)
+      .filter(Boolean);
+
+    return toolResult({
+      tag: args.tag,
+      ...(hub.description && { description: hub.description }),
+      related_tags: relatedTags,
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
+const getTagInfo = tool(
+  "get_tag_info",
+  "Get information about a Bandcamp genre/tag. " +
+    "Returns tag description and related tags. " +
+    "Use to explore the genre taxonomy and find related styles.",
+  {
+    tag: z.string().describe("Genre tag (e.g. 'ambient', 'hip-hop-rap', 'post-punk')"),
+  },
+  getTagInfoHandler,
+);
+
+// ---------------------------------------------------------------------------
 // Server export
 // ---------------------------------------------------------------------------
 
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [searchBandcamp, getArtistPage, getAlbum, discoverMusic],
+  tools: [searchBandcamp, getArtistPage, getAlbum, discoverMusic, getTagInfo],
 });
