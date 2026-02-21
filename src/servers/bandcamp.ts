@@ -70,13 +70,30 @@ export async function bandcampFetch(url: string): Promise<string | null> {
 // Pagedata Extractor
 // ---------------------------------------------------------------------------
 
+/** Decode common HTML entities in a string. */
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'");
+}
+
 export function extractPagedata(html: string): any | null {
   const match = html.match(/id="pagedata"\s+data-blob="([^"]*)"/);
   if (!match?.[1]) return null;
   try {
-    return JSON.parse(decodeURIComponent(match[1]));
+    // Bandcamp uses HTML-entity-encoded JSON in data-blob
+    return JSON.parse(decodeHtmlEntities(match[1]));
   } catch {
-    return null;
+    // Fallback: some pages may use URL encoding
+    try {
+      return JSON.parse(decodeURIComponent(match[1]));
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -215,13 +232,14 @@ export async function getArtistPageHandler(args: { url: string }) {
 
     const name = pagedata?.name ?? $("meta[property='og:title']").attr("content") ?? "Unknown";
     const location = $(".location").first().text().trim() || undefined;
-    const bio = pagedata?.bio?.text || undefined;
+    const bio = pagedata?.bio?.text || $(".signed-out-artists-bio-text .bio-text").text().trim() || undefined;
     const bandId = pagedata?.band_id || undefined;
     const imageUrl = pagedata?.image_id
       ? `https://f4.bcbits.com/img/${pagedata.image_id}_0.jpg`
-      : undefined;
+      : $(".band-photo").attr("src") || undefined;
 
-    const discography = (pagedata?.discography ?? []).map((item: any) => ({
+    // Try pagedata first, then fall back to DOM scraping
+    let discography = (pagedata?.discography ?? []).map((item: any) => ({
       title: item.title,
       url: item.page_url
         ? new URL(item.page_url, args.url).href
@@ -232,6 +250,28 @@ export async function getArtistPageHandler(args: { url: string }) {
         ? `https://f4.bcbits.com/img/a${item.art_id}_0.jpg`
         : undefined,
     }));
+
+    // DOM fallback: scrape #music-grid when pagedata has no discography
+    if (discography.length === 0) {
+      $("#music-grid li").each((_, el) => {
+        const $el = $(el);
+        const href = $el.find("a").first().attr("href");
+        const title = $el.find("p.title").text().trim();
+        const imgSrc = $el.find("img").attr("src") ?? "";
+        const artUrl = imgSrc && !imgSrc.endsWith("/0.gif") ? imgSrc : undefined;
+        const isTrack = href?.includes("/track/");
+
+        if (title && href) {
+          discography.push({
+            title,
+            url: new URL(href, args.url).href,
+            type: isTrack ? "track" : "album",
+            release_date: undefined,
+            ...(artUrl && { art_url: artUrl }),
+          });
+        }
+      });
+    }
 
     const links = (pagedata?.bandLinks ?? [])
       .map((l: any) => l.url)

@@ -243,6 +243,51 @@ describe("bandcamp", () => {
       expect(data.name).toBe("Minimal Artist");
       expect(data.recent_feed).toBeUndefined();
     });
+
+    it("falls back to DOM scraping when pagedata has no discography", async () => {
+      // Pagedata with no discography key (like real Boards of Canada page)
+      const pagedata = `{&quot;cfg&quot;:{},&quot;templglobals&quot;:{}}`;
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          `<div id="pagedata" data-blob="${pagedata}"></div>
+           <meta property="og:title" content="Test Band" />
+           <span class="location">Edinburgh, UK</span>
+           <ol id="music-grid">
+             <li class="music-grid-item">
+               <a href="/album/first-album">
+                 <img src="https://f4.bcbits.com/img/a111_2.jpg" />
+               </a>
+               <p class="title">First Album</p>
+             </li>
+             <li class="music-grid-item">
+               <a href="/track/single-track">
+                 <img src="/img/0.gif" />
+               </a>
+               <p class="title">Single Track</p>
+             </li>
+           </ol>`,
+      });
+
+      // RSS feed
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+      const { getArtistPageHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistPageHandler({ url: "https://test.bandcamp.com" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.name).toBe("Test Band");
+      expect(data.discography).toHaveLength(2);
+      expect(data.discography[0].title).toBe("First Album");
+      expect(data.discography[0].type).toBe("album");
+      expect(data.discography[0].url).toBe("https://test.bandcamp.com/album/first-album");
+      expect(data.discography[0].art_url).toBe("https://f4.bcbits.com/img/a111_2.jpg");
+      expect(data.discography[1].title).toBe("Single Track");
+      expect(data.discography[1].type).toBe("track");
+      // Placeholder images (0.gif) should be excluded
+      expect(data.discography[1].art_url).toBeUndefined();
+    });
   });
 
 
