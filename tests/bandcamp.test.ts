@@ -78,6 +78,15 @@ describe("bandcamp", () => {
       });
     });
 
+    it("extracts HTML-entity-encoded tralbum from double-quoted attribute", async () => {
+      const html = `<script data-tralbum="{&quot;trackinfo&quot;:[{&quot;title&quot;:&quot;Song One&quot;,&quot;duration&quot;:200}]}"></script>`;
+      const { extractTralbum } = await import("../src/servers/bandcamp.js");
+      const result = extractTralbum(html);
+      expect(result).toEqual({
+        trackinfo: [{ title: "Song One", duration: 200 }],
+      });
+    });
+
     it("returns null when no tralbum data exists", async () => {
       const { extractTralbum } = await import("../src/servers/bandcamp.js");
       const result = extractTralbum("<html><body>No tralbum</body></html>");

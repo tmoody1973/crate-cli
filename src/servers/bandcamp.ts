@@ -102,13 +102,21 @@ export function extractPagedata(html: string): any | null {
 // ---------------------------------------------------------------------------
 
 export function extractTralbum(html: string): any | null {
-  const match = html.match(/data-tralbum='([^']*)'/);
-  if (!match?.[1]) return null;
-  try {
-    return JSON.parse(match[1]);
-  } catch {
-    return null;
+  // Try single-quoted attribute first (raw JSON)
+  const sq = html.match(/data-tralbum='([^']*)'/);
+  if (sq?.[1]) {
+    try {
+      return JSON.parse(sq[1]);
+    } catch { /* fall through */ }
   }
+  // Try double-quoted attribute (HTML-entity-encoded JSON)
+  const dq = html.match(/data-tralbum="([^"]*)"/);
+  if (dq?.[1]) {
+    try {
+      return JSON.parse(decodeHtmlEntities(dq[1]));
+    } catch { /* fall through */ }
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
