@@ -219,7 +219,7 @@ const SERVER_LABELS: Record<string, string> = {
   radio: "Radio",
   collection: "Collection",
   playlist: "Playlist",
-  "web-search": "Web",
+  websearch: "Web",
   memory: "Memory",
 };
 

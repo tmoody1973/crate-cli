@@ -32,7 +32,7 @@ export function getActiveServers(): Record<string, any> {
   servers.radio = radioServer; // Always available (no API key)
   servers.collection = collectionServer; // Always available (local SQLite)
   servers.playlist = playlistServer; // Always available (local SQLite)
-  if (hasTavily() || hasExa()) servers["web-search"] = webSearchServer;
+  if (hasTavily() || hasExa()) servers.websearch = webSearchServer;
 
   return servers;
 }
@@ -46,7 +46,7 @@ export function getServerStatus(): { active: string[]; inactive: string[] } {
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
-    "radio", "collection", "playlist", "web-search",
+    "radio", "collection", "playlist", "websearch",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };

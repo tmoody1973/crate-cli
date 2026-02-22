@@ -77,40 +77,62 @@ export function hasExa(): boolean {
   return !!process.env.EXA_API_KEY;
 }
 
-async function tavilyPost(endpoint: string, body: Record<string, any>): Promise<any> {
-  const resp = await fetch(`${TAVILY_BASE}/${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${tavilyKey()}`,
-    },
-    body: JSON.stringify(body),
-  });
+const FETCH_TIMEOUT_MS = 15_000; // 15s timeout for external API calls
 
-  if (!resp.ok) {
-    if (resp.status === 401) throw new Error("Invalid TAVILY_API_KEY. Check your key at tavily.com");
-    if (resp.status === 429) throw new Error("Tavily rate limit reached. Wait a moment and retry.");
-    throw new Error(`Tavily API error: ${resp.status} ${resp.statusText}`);
+async function tavilyPost(endpoint: string, body: Record<string, any>): Promise<any> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const resp = await fetch(`${TAVILY_BASE}/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tavilyKey()}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!resp.ok) {
+      if (resp.status === 401) throw new Error("Invalid TAVILY_API_KEY. Check your key at tavily.com");
+      if (resp.status === 429) throw new Error("Tavily rate limit reached. Wait a moment and retry.");
+      throw new Error(`Tavily API error: ${resp.status} ${resp.statusText}`);
+    }
+    return resp.json();
+  } catch (err: any) {
+    if (err.name === "AbortError") throw new Error("Tavily request timed out after 15s. The API may be slow — try again.");
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return resp.json();
 }
 
 async function exaPost(endpoint: string, body: Record<string, any>): Promise<any> {
-  const resp = await fetch(`${EXA_BASE}/${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": exaKey(),
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const resp = await fetch(`${EXA_BASE}/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": exaKey(),
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
 
-  if (!resp.ok) {
-    if (resp.status === 401) throw new Error("Invalid EXA_API_KEY. Check your key at exa.ai");
-    if (resp.status === 429) throw new Error("Exa rate limit reached. Wait a moment and retry.");
-    throw new Error(`Exa API error: ${resp.status} ${resp.statusText}`);
+    if (!resp.ok) {
+      if (resp.status === 401) throw new Error("Invalid EXA_API_KEY. Check your key at exa.ai");
+      if (resp.status === 429) throw new Error("Exa rate limit reached. Wait a moment and retry.");
+      throw new Error(`Exa API error: ${resp.status} ${resp.statusText}`);
+    }
+    return resp.json();
+  } catch (err: any) {
+    if (err.name === "AbortError") throw new Error("Exa request timed out after 15s. The API may be slow — try again.");
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return resp.json();
 }
 
 /** Truncate text content to keep tool results token-efficient */
