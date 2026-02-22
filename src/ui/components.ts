@@ -85,17 +85,11 @@ ${chalk.dim(DESCRIPTION)}
 
 ${chalk.dim("Type a question to start researching. Use /help for commands.")}`;
 
-export const HELP_TEXT = `${chalk.bold.cyan("Crate — Music Research Agent")}
+export const HELP_TEXT = `${chalk.bold.cyan("Crate \u2014 Music Research Agent")}
 
-${chalk.bold("How to use")}
-  ${chalk.dim("Type naturally to research music. Crate searches MusicBrainz, Discogs,")}
-  ${chalk.dim("Genius, Wikipedia, Last.fm, Bandcamp, and YouTube to answer your questions.")}
-
-  ${chalk.dim("Examples:")}
-  ${chalk.dim("  \"Who produced Madvillainy?\"")}
-  ${chalk.dim("  \"Tell me about the label Stones Throw\"")}
-  ${chalk.dim("  \"Find similar artists to MF DOOM\"")}
-  ${chalk.dim("  \"Play some J Dilla instrumentals\"")}
+${chalk.bold("Research")}
+  Just ask naturally \u2014 Crate searches MusicBrainz, Discogs, Genius,
+  Wikipedia, Last.fm, Bandcamp, and the web to answer your questions.
 
 ${chalk.bold("Player")}
   ${chalk.cyan("/play")}${chalk.dim(" <query>")}   Play a track from YouTube
@@ -106,14 +100,62 @@ ${chalk.bold("Player")}
   ${chalk.cyan("/vol")}${chalk.dim(" [0-150]")}    Set or show volume
   ${chalk.cyan("/np")}              Now playing info
 
-${chalk.bold("Collection & Playlists")}
-  ${chalk.cyan("/collection")}      Show collection stats
-  ${chalk.cyan("/playlists")}       List all playlists
+${chalk.bold("Library")}
+  ${chalk.cyan("/collection")}      Collection stats
+  ${chalk.cyan("/playlists")}       List playlists
 
 ${chalk.bold("Session")}
-  ${chalk.cyan("/model")}${chalk.dim(" [name]")}   Show or switch model (sonnet, opus, haiku)
-  ${chalk.cyan("/cost")}            Show token usage and cost
-  ${chalk.cyan("/servers")}         Show active/inactive servers
-  ${chalk.cyan("/clear")}           Clear the screen
-  ${chalk.cyan("/help")}            Show this help
-  ${chalk.cyan("/quit")}            Exit Crate`;
+  ${chalk.cyan("/model")}${chalk.dim(" [name]")}   Switch model (sonnet, opus, haiku)
+  ${chalk.cyan("/cost")}            Token usage and cost
+  ${chalk.cyan("/servers")}         Active/inactive servers
+  ${chalk.cyan("/keys")}            Manage API keys
+  ${chalk.cyan("/clear")} \u00B7 ${chalk.cyan("/help")} \u00B7 ${chalk.cyan("/quit")}`;
+
+// ── Error formatting ───────────────────────────────────────────────────────
+
+export type ErrorType = "api_down" | "rate_limit" | "missing_key" | "bad_query";
+
+export interface ErrorDetails {
+  source?: string;
+  message?: string;
+  keyCommand?: string;
+}
+
+/** Format an error using the What \u2192 Impact \u2192 Action pattern. */
+export function formatError(type: ErrorType, details: ErrorDetails = {}): string {
+  const { source, message, keyCommand } = details;
+  const src = source ? ` (${source})` : "";
+
+  switch (type) {
+    case "api_down":
+      return [
+        chalk.red(`\u2716 ${source ?? "Service"} is unavailable`),
+        chalk.dim(message ?? "The API did not respond."),
+        chalk.dim("Crate will use other sources. Try again later for this one."),
+      ].join("\n");
+
+    case "rate_limit":
+      return [
+        chalk.yellow(`\u26A0 Rate limited${src}`),
+        chalk.dim("Too many requests in a short time."),
+        chalk.dim("Wait a moment and try again, or continue \u2014 other sources still work."),
+      ].join("\n");
+
+    case "missing_key":
+      return [
+        chalk.yellow(`\u26A0 ${source ?? "Service"} requires an API key`),
+        chalk.dim(`This source is unavailable without a key.`),
+        chalk.dim(keyCommand ? `Run ${chalk.cyan(keyCommand)} to add it.` : "Use /keys to add API keys."),
+      ].join("\n");
+
+    case "bad_query":
+      return [
+        chalk.yellow(`\u26A0 Couldn't understand that query`),
+        chalk.dim(message ?? "Try rephrasing your question."),
+        chalk.dim('Example: "Who produced Madvillainy?" or "Tell me about Stones Throw Records"'),
+      ].join("\n");
+
+    default:
+      return chalk.red(message ?? "An unexpected error occurred.");
+  }
+}

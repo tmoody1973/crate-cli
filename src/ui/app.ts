@@ -22,6 +22,15 @@ import {
 import { collectionStatsHandler } from "../servers/collection.js";
 import { playlistListHandler } from "../servers/playlist.js";
 import { showKeysPanel } from "./keys-panel.js";
+import {
+  isFirstRun,
+  markOnboardingComplete,
+  getMessageCount,
+  incrementMessageCount,
+  getHintForContext,
+} from "../utils/hints.js";
+import type { HintContext } from "../utils/hints.js";
+import { showOnboarding } from "./onboarding.js";
 
 function addChildBeforeEditor(tui: TUI, child: any): void {
   const children = tui.children;
@@ -183,6 +192,45 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
     default:
       return `Using ${bare.replace(/_/g, " ")}...`;
   }
+}
+
+/** Friendly display names for MCP server prefixes. */
+const SERVER_LABELS: Record<string, string> = {
+  musicbrainz: "MusicBrainz",
+  discogs: "Discogs",
+  genius: "Genius",
+  lastfm: "Last.fm",
+  wikipedia: "Wikipedia",
+  bandcamp: "Bandcamp",
+  youtube: "YouTube",
+  collection: "Collection",
+  playlist: "Playlist",
+  "web-search": "Web",
+  memory: "Memory",
+};
+
+/** Extract the server name from a fully-qualified MCP tool name. */
+function extractServerName(toolName: string): string | null {
+  const match = toolName.match(/^mcp__([^_]+)__/);
+  return match ? match[1] ?? null : null;
+}
+
+/** Build a multi-source progress string with checkmarks for completed sources. */
+function buildProgressMessage(
+  completed: Set<string>,
+  current: string | null,
+  _elapsed: number,
+): string {
+  const parts: string[] = [];
+  for (const server of completed) {
+    const label = SERVER_LABELS[server] ?? server;
+    parts.push(chalk.green("\u2713") + " " + chalk.dim(label));
+  }
+  if (current && !completed.has(current)) {
+    const label = SERVER_LABELS[current] ?? current;
+    parts.push(chalk.cyan("\u280B") + " " + label + "\u2026");
+  }
+  return parts.join(chalk.dim(" \u00B7 "));
 }
 
 async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): Promise<void> {
@@ -354,6 +402,17 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
       const data = JSON.parse(result.content[0].text);
       if (data.error) {
         addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${data.error}`), 1, 0));
+      } else if (!data.total || data.total === 0) {
+        const emptyMsg = [
+          chalk.bold("Your collection is empty."),
+          "",
+          chalk.dim("Start building it:"),
+          chalk.dim('  "Add Kind of Blue by Miles Davis, vinyl, 1959"'),
+          chalk.dim('  "Add my copy of Madvillainy on Stones Throw"'),
+          "",
+          chalk.dim("Or import from Discogs \u2014 just ask!"),
+        ].join("\n");
+        addChildBeforeEditor(tui, new Text(emptyMsg, 1, 1));
       } else {
         const lines = [
           chalk.bold("Collection Stats"),
@@ -389,7 +448,14 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
       if (data.error) {
         addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${data.error}`), 1, 0));
       } else if (!data.playlists?.length) {
-        addChildBeforeEditor(tui, new Text(chalk.dim("No playlists yet. Ask Crate to create one!"), 1, 0));
+        const emptyMsg = [
+          chalk.bold("No playlists yet."),
+          "",
+          chalk.dim("Try:"),
+          chalk.dim('  "Create a playlist called \'Jazz Essentials\'"'),
+          chalk.dim('  "Build me a 10-track intro to Afrobeat"'),
+        ].join("\n");
+        addChildBeforeEditor(tui, new Text(emptyMsg, 1, 1));
       } else {
         const lines = [chalk.bold("Playlists")];
         for (const p of data.playlists as any[]) {
@@ -431,8 +497,13 @@ export function createApp(agent: CrateAgent): TUI {
   const terminal = new ProcessTerminal();
   const tui = new TUI(terminal);
 
-  // Welcome message
-  tui.addChild(new Text(WELCOME_TEXT, 1, 1));
+  // Welcome message (onboarding on first run, normal welcome after)
+  if (isFirstRun()) {
+    showOnboarding(tui);
+    markOnboardingComplete();
+  } else {
+    tui.addChild(new Text(WELCOME_TEXT, 1, 1));
+  }
 
   // Slash command autocomplete
   const slashCommands: SlashCommand[] = [
@@ -476,6 +547,7 @@ export function createApp(agent: CrateAgent): TUI {
 
     isProcessing = true;
     editor.disableSubmit = true;
+    incrementMessageCount();
 
     // Show user message
     addChildBeforeEditor(
@@ -493,22 +565,70 @@ export function createApp(agent: CrateAgent): TUI {
     addChildBeforeEditor(tui, loader);
     tui.requestRender();
 
-    // Stream agent response
+    // Stream agent response — with progress tiers and interrupt support
     const response = new Markdown("", 1, 1, markdownTheme);
     let accumulated = "";
     let loaderRemoved = false;
+    const startTime = Date.now();
+    const sourcesUsed = new Set<string>();
+    const toolsUsed: string[] = [];
+    let aborted = false;
+
+    // Interrupt handling — Esc during streaming
+    const onEsc = (key: string) => {
+      if (key === "escape" && isProcessing) {
+        aborted = true;
+      }
+    };
+    if (typeof (tui as any).onKey === "function") {
+      (tui as any).onKey(onEsc);
+    } else if (typeof (tui as any).on === "function") {
+      (tui as any).on("key", onEsc);
+    }
 
     try {
       for await (const msg of agent.chat(trimmed)) {
+        if (aborted) break;
+
         if (msg.type === "assistant") {
           const content = (msg as any).message?.content;
           if (!content) continue;
 
           for (const block of content) {
-            // Update loader with tool call progress
+            if (aborted) break;
+
+            // Update loader with tool call progress (with elapsed-time tiers)
             if (block.type === "tool_use" && !loaderRemoved) {
-              const progressMsg = getToolProgressMessage(block.name, block.input ?? {});
-              loader.setMessage(progressMsg);
+              const bare = block.name.replace(/^mcp__[^_]+__/, "");
+              toolsUsed.push(bare);
+              const serverName = extractServerName(block.name);
+              const elapsed = Date.now() - startTime;
+
+              if (elapsed < 3000) {
+                // Tier 1: simple message
+                const progressMsg = getToolProgressMessage(block.name, block.input ?? {});
+                loader.setMessage(progressMsg);
+              } else {
+                // Tier 2+: source-by-source with checkmarks
+                if (serverName) {
+                  // Mark previous server as done, current as in-progress
+                  const prevServers = [...sourcesUsed];
+                  if (serverName && prevServers.length > 0) {
+                    // All previously seen servers are "completed"
+                  }
+                  sourcesUsed.add(serverName);
+                  const completed = new Set(
+                    [...sourcesUsed].filter((s) => s !== serverName),
+                  );
+                  loader.setMessage(buildProgressMessage(completed, serverName, elapsed));
+                } else {
+                  const progressMsg = getToolProgressMessage(block.name, block.input ?? {});
+                  loader.setMessage(progressMsg);
+                }
+              }
+
+              // Always track the server for the footer
+              if (serverName) sourcesUsed.add(serverName);
             }
 
             if (block.type === "text" && block.text) {
@@ -527,6 +647,7 @@ export function createApp(agent: CrateAgent): TUI {
     } catch (error) {
       if (!loaderRemoved) {
         tui.removeChild(loader);
+        loaderRemoved = true;
       }
       const message =
         error instanceof Error ? error.message : "An unexpected error occurred";
@@ -540,10 +661,64 @@ export function createApp(agent: CrateAgent): TUI {
       tui.removeChild(loader);
     }
 
+    // Interrupt notice
+    if (aborted) {
+      addChildBeforeEditor(
+        tui,
+        new Text(
+          chalk.yellow("\u26A0 Response interrupted \u2014 some sources may not have been checked."),
+          1,
+          0,
+        ),
+      );
+    }
+
+    // Post-response footer: sources · duration · cost
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    const displaySources = [...sourcesUsed]
+      .map((s) => SERVER_LABELS[s] ?? s)
+      .filter((s) => s !== "Collection" && s !== "Playlist" && s !== "Memory");
+    const sourceList = displaySources.length > 0 ? displaySources.join(" \u00B7 ") : "";
+    const costStr = `$${agent.cost.toFixed(4)}`;
+    const footerParts = [sourceList, `${duration}s`, costStr].filter(Boolean);
+    addChildBeforeEditor(
+      tui,
+      new Text(chalk.dim(footerParts.join("  \u00B7  ")), 1, 0),
+    );
+
+    // Contextual hints
+    const hasTrackList = /\d+\.\s/.test(accumulated) && /(track|song|album)/i.test(accumulated);
+    const hintCtx: HintContext = {
+      toolsUsed,
+      messageCount: getMessageCount(),
+      responseLength: accumulated.length,
+      hasTrackList,
+      collectionSize: 0, // TODO: could query, but avoid DB hit on every response
+      playlistCount: 0,
+    };
+    const hint = getHintForContext(hintCtx);
+    if (hint) {
+      addChildBeforeEditor(
+        tui,
+        new Text(chalk.dim.italic(`\u{1F4A1} ${hint}`), 1, 0),
+      );
+    }
+
     isProcessing = false;
     editor.disableSubmit = false;
     tui.requestRender();
   };
+
+  // Graceful Ctrl+C handling
+  process.on("SIGINT", () => {
+    if (isProcessing) {
+      // During streaming, just flag abort — the streaming loop handles cleanup
+      return;
+    }
+    // Not processing — clean exit
+    tui.stop();
+    process.exit(0);
+  });
 
   // Now-playing bar (polls mpv, auto-shows/hides)
   const nowPlayingBar = new NowPlayingBar();
