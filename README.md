@@ -82,17 +82,143 @@ Each prompt triggers cross-referencing across multiple databases — no single s
 |--------|-------|------------------|
 | **MusicBrainz** | 6 (artist, release, recording search + details) | No |
 | **Wikipedia** | 3 (search, summary, full article) | No |
-| **Bandcamp** | 6 (search, artist, album, discover, tags, editorial) | No |
+| **Bandcamp** | 6 (search, artist, album, discover + location, tags, editorial) | No |
 | **YouTube** | 4 (search, play track, play playlist, player control) | No* |
 | **Discogs** | 9 (search, artist, release, label, master, marketplace) | Yes |
 | **Last.fm** | 8 (artist/album/track stats, similar artists, tags, geo) | Yes |
 | **Genius** | 6 (song search, annotations, artist info) | Yes |
+| **Web Search** | 3 (search, find similar, extract content) | Yes* |
 
 MusicBrainz, Wikipedia, Bandcamp, and YouTube are always available. The others activate automatically when you provide their API keys.
+
+*Web Search uses dual providers — Tavily (keyword) and Exa.ai (neural/semantic). Either key enables the server; both keys unlock the full toolkit.
 
 *YouTube search works without a key via yt-dlp scraping. Set `YOUTUBE_API_KEY` for faster, richer search results.
 
 Wikipedia supports optional [Wikimedia Enterprise](https://enterprise.wikimedia.com/) credentials for richer article content, with automatic fallback to free endpoints.
+
+## Tools Reference
+
+Crate's agent has access to **63 tools** across 11 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
+
+### MusicBrainz (always available)
+
+| Tool | What it does |
+|------|-------------|
+| `search_artist` | Search for artists by name — returns IDs, type, country |
+| `get_artist` | Full artist details: relationships, collaborations, discography |
+| `search_release` | Search for albums/singles/EPs, optionally filter by artist |
+| `get_release` | Full release details: tracklist, credits, label info |
+| `search_recording` | Search for individual tracks, optionally filter by artist |
+| `get_recording_credits` | Detailed credits for a recording: producer, engineer, etc. |
+
+### Wikipedia (always available)
+
+| Tool | What it does |
+|------|-------------|
+| `search_articles` | Search Wikipedia for artist bios, genre histories, label backgrounds |
+| `get_summary` | Quick article summary — fast and token-efficient |
+| `get_article` | Full article content as clean plaintext for deep research |
+
+### Bandcamp (always available)
+
+| Tool | What it does |
+|------|-------------|
+| `search_bandcamp` | Search for artists, albums, tracks, or labels. Supports `location` filter (e.g. "Milwaukee") |
+| `get_artist_page` | Full artist/label profile: bio, discography, links |
+| `get_album` | Full album details: tracklist, tags, credits, pricing |
+| `discover_music` | Browse trending/new releases by genre tag. Supports `location` filter for city-based discovery |
+| `get_tag_info` | Genre/tag info and related tags |
+| `get_bandcamp_editorial` | Bandcamp Daily articles, reviews, and features |
+
+### YouTube (always available)
+
+| Tool | What it does |
+|------|-------------|
+| `search_tracks` | Search YouTube for music tracks |
+| `play_track` | Play a track from a search query or YouTube URL |
+| `play_playlist` | Play a list of tracks as a playlist, supports shuffle |
+| `player_control` | Pause, resume, next, previous, stop, volume, now playing |
+
+### Collection (always available)
+
+| Tool | What it does |
+|------|-------------|
+| `collection_add` | Add a record: artist, title, format, year, label, rating, tags |
+| `collection_search` | Search by text, artist, status, tag, or format |
+| `collection_update` | Update any fields on a record |
+| `collection_remove` | Remove a record |
+| `collection_stats` | Stats: totals by status/format/decade, average rating, top tags |
+| `collection_tags` | List all tags with counts |
+
+### Playlist (always available)
+
+| Tool | What it does |
+|------|-------------|
+| `playlist_create` | Create a new playlist |
+| `playlist_add_track` | Add a track to a playlist at a specific position |
+| `playlist_list` | List all playlists with track counts |
+| `playlist_get` | Get a playlist with all tracks (chainable with `play_playlist`) |
+| `playlist_remove_track` | Remove a track from a playlist |
+| `playlist_export` | Export as markdown, M3U, or JSON |
+| `playlist_delete` | Delete a playlist and all its tracks |
+
+### Discogs (requires `DISCOGS_KEY` + `DISCOGS_SECRET`)
+
+| Tool | What it does |
+|------|-------------|
+| `search_discogs` | Search for artists, releases, masters, or labels |
+| `get_artist_discogs` | Full artist profile: bio, members, aliases, images |
+| `get_artist_releases` | Full discography with year, format, label, role |
+| `get_label` | Label profile: bio, contact, sublabels |
+| `get_label_releases` | Label catalog with artist, year, format, catalog number |
+| `get_master` | Master release: groups all pressings/formats, tracklist, genres |
+| `get_master_versions` | All versions of a master: pressings, formats, countries |
+| `get_release_full` | Full release: tracklist with per-track credits, identifiers, notes |
+| `get_marketplace_stats` | Marketplace pricing: lowest price, number for sale |
+
+### Last.fm (requires `LASTFM_API_KEY`)
+
+| Tool | What it does |
+|------|-------------|
+| `get_artist_info` | Artist stats: listener/play counts, similar artists, bio |
+| `get_album_info` | Album stats: listener/play counts, tracklist, tags, wiki |
+| `get_track_info` | Track stats: listener/play counts, tags, album info |
+| `get_similar_artists` | Similar artists with match scores (0-1) |
+| `get_similar_tracks` | Similar tracks with match scores |
+| `get_top_tracks` | Artist's most popular tracks by play count |
+| `get_tag_artists` | Top artists for a genre/mood/scene tag |
+| `get_geo_top_tracks` | Most popular tracks in a specific country |
+
+### Genius (requires `GENIUS_ACCESS_TOKEN`)
+
+| Tool | What it does |
+|------|-------------|
+| `search_songs` | Search for songs by title, artist, or lyrics snippet |
+| `get_song` | Full song details: producers, writers, samples, relationships |
+| `get_song_annotations` | Crowd-sourced lyric explanations and interpretations |
+| `get_artist_genius` | Artist profile: bio, social media, alternate names |
+| `get_artist_songs_genius` | Artist's songs sorted by popularity or title |
+| `get_annotation` | Specific annotation with votes and verification status |
+
+### Memory (requires `MEM0_API_KEY`)
+
+| Tool | What it does |
+|------|-------------|
+| `get_user_context` | Search stored memories about your preferences and interests |
+| `update_user_memory` | Auto-extract and store facts from conversation |
+| `remember_about_user` | Explicitly store a single fact about you |
+| `list_user_memories` | List all stored memories, optionally by category |
+
+### Web Search (requires `TAVILY_API_KEY` and/or `EXA_API_KEY`)
+
+| Tool | What it does |
+|------|-------------|
+| `search_web` | Search the open web for music blogs, scene reports, festival lineups, forum threads |
+| `find_similar` | Find pages semantically similar to a URL (e.g., "find labels like Stones Throw") |
+| `extract_content` | Extract clean text from URLs for deep reading |
+
+Dual-provider architecture: Tavily handles keyword search with domain filtering and time ranges; Exa.ai handles neural/semantic search and find-similar. Either key enables the server.
 
 ## Quick Start
 
@@ -174,6 +300,7 @@ A now-playing bar auto-appears at the bottom of the terminal during playback, sh
 | `/model [name]` | Show or switch model (sonnet, opus, haiku) |
 | `/cost` | Show token usage and cost |
 | `/servers` | Show active/inactive servers |
+| `/keys` | Manage API keys (add, edit, remove) |
 | `/clear` | Clear the screen |
 | `/help` | Show help |
 | `/quit` | Exit Crate |
@@ -187,9 +314,13 @@ A now-playing bar auto-appears at the bottom of the terminal during playback, sh
 | `DISCOGS_SECRET` | Discogs API consumer secret | No |
 | `LASTFM_API_KEY` | Last.fm API key | No |
 | `GENIUS_ACCESS_TOKEN` | Genius API access token | No |
+| `TAVILY_API_KEY` | Tavily web search (keyword) | No |
+| `EXA_API_KEY` | Exa.ai web search (neural/semantic) | No |
+| `MEM0_API_KEY` | Persistent memory across sessions | No |
 | `YOUTUBE_API_KEY` | YouTube Data API key (enhances search) | No |
-| `WIKIMEDIA_USERNAME` | Wikimedia Enterprise username | No |
-| `WIKIMEDIA_PASSWORD` | Wikimedia Enterprise password | No |
+| `TICKETMASTER_API_KEY` | Live event and concert discovery | No |
+
+All keys can be managed interactively from within Crate using the `/keys` command — no need to edit `.env` manually.
 
 ## Project Structure
 
@@ -208,13 +339,19 @@ crate-cli/
 │   │   ├── lastfm.ts          # Last.fm MCP server (8 tools)
 │   │   ├── wikipedia.ts       # Wikipedia MCP server (3 tools)
 │   │   ├── bandcamp.ts        # Bandcamp MCP server (6 tools)
-│   │   └── youtube.ts         # YouTube player MCP server (4 tools)
+│   │   ├── youtube.ts         # YouTube player MCP server (4 tools)
+│   │   ├── web-search.ts      # Web search MCP server (3 tools, Tavily + Exa)
+│   │   ├── collection.ts      # Local collection manager (SQLite)
+│   │   ├── playlist.ts        # Playlist manager (SQLite)
+│   │   └── memory.ts          # Mem0 persistent memory
 │   ├── ui/
 │   │   ├── app.ts             # TUI setup, slash commands
 │   │   ├── components.ts      # Themes, banner, hyperlinks
+│   │   ├── keys-panel.ts      # Interactive API key management (/keys)
 │   │   └── now-playing.ts     # Now-playing bar overlay
 │   └── utils/
-│       └── config.ts          # Model resolution, env config
+│       ├── config.ts          # Model resolution, env config
+│       └── env.ts             # .env file read/write utilities
 ├── tests/
 ├── docs/                      # Design docs and plans
 ├── package.json
