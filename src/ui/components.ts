@@ -79,7 +79,7 @@ const DESCRIPTION = `Crate is an AI-powered music research agent for DJs, collec
 export const WELCOME_TEXT = `${BANNER}
 ${SEPARATOR}
 ${chalk.bold.white("deep music research agent")}${chalk.dim("                          v0.5.0")}
-${chalk.dim("MusicBrainz · Discogs · Genius · Wikipedia · +5")}
+${chalk.dim("MusicBrainz · Discogs · Genius · Wikipedia · Radio · +5")}
 
 ${chalk.dim(DESCRIPTION)}
 
@@ -90,6 +90,7 @@ export const HELP_TEXT = `${chalk.bold.cyan("Crate \u2014 Music Research Agent")
 ${chalk.bold("Research")}
   Just ask naturally \u2014 Crate searches MusicBrainz, Discogs, Genius,
   Wikipedia, Last.fm, Bandcamp, and the web to answer your questions.
+  Ask for live radio stations to stream 30,000+ stations worldwide.
 
 ${chalk.bold("Player")}
   ${chalk.cyan("/play")}${chalk.dim(" <query>")}   Play a track from YouTube

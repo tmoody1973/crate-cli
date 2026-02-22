@@ -2,7 +2,7 @@
 
 > AI-powered music research agent for the terminal
 
-Crate is a CLI tool that helps DJs, record collectors, music journalists, and serious listeners research music in depth. It uses Claude as an AI agent with direct access to multiple music databases, returning structured, cross-referenced results in a rich terminal UI — with built-in audio playback.
+Crate is a CLI tool that helps DJs, record collectors, music journalists, and serious listeners research music in depth. It uses Claude as an AI agent with direct access to multiple music databases, returning structured, cross-referenced results in a rich terminal UI — with built-in audio playback and live radio streaming.
 
 ## How It Works
 
@@ -33,6 +33,16 @@ Play music directly from the conversation:
 > Play Accordion by Madvillain
 
 ▶ Accordion - Madvillain · MADVILLAINY  ━━━━━━━━━●──────── 1:12 / 2:00  vol:100
+```
+
+Stream live radio from 30,000+ stations worldwide:
+
+```
+> Play some jazz radio
+
+Tuning in to "WBGO Jazz 88.3"...
+
+* Miles Davis - So What · WBGO  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  LIVE  vol:100
 ```
 
 ## Use Cases
@@ -84,12 +94,13 @@ Each prompt triggers cross-referencing across multiple databases — no single s
 | **Wikipedia** | 3 (search, summary, full article) | No |
 | **Bandcamp** | 6 (search, artist, album, discover + location, tags, editorial) | No |
 | **YouTube** | 4 (search, play track, play playlist, player control) | No* |
+| **Radio Browser** | 4 (search, browse, tags, play station) | No |
 | **Discogs** | 9 (search, artist, release, label, master, marketplace) | Yes |
 | **Last.fm** | 8 (artist/album/track stats, similar artists, tags, geo) | Yes |
 | **Genius** | 6 (song search, annotations, artist info) | Yes |
 | **Web Search** | 3 (search, find similar, extract content) | Yes* |
 
-MusicBrainz, Wikipedia, Bandcamp, and YouTube are always available. The others activate automatically when you provide their API keys.
+MusicBrainz, Wikipedia, Bandcamp, YouTube, and Radio Browser are always available — no API keys needed. The others activate automatically when you provide their API keys.
 
 *Web Search uses dual providers — Tavily (keyword) and Exa.ai (neural/semantic). Either key enables the server; both keys unlock the full toolkit.
 
@@ -99,7 +110,7 @@ Wikipedia supports optional [Wikimedia Enterprise](https://enterprise.wikimedia.
 
 ## Tools Reference
 
-Crate's agent has access to **63 tools** across 11 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
+Crate's agent has access to **67 tools** across 12 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
 
 ### MusicBrainz (always available)
 
@@ -139,6 +150,15 @@ Crate's agent has access to **63 tools** across 11 MCP servers. You don't call t
 | `play_track` | Play a track from a search query or YouTube URL |
 | `play_playlist` | Play a list of tracks as a playlist, supports shuffle |
 | `player_control` | Pause, resume, next, previous, stop, volume, now playing |
+
+### Radio Browser (always available)
+
+| Tool | What it does |
+|------|-------------|
+| `search_radio` | Search stations by name, genre tag, country, or language |
+| `browse_radio` | Browse top stations by tag or country, sorted by popularity |
+| `get_radio_tags` | List available genre/style tags with station counts |
+| `play_radio` | Stream a live radio station via mpv (by URL or station name) |
 
 ### Collection (always available)
 
@@ -340,6 +360,7 @@ crate-cli/
 │   │   ├── wikipedia.ts       # Wikipedia MCP server (3 tools)
 │   │   ├── bandcamp.ts        # Bandcamp MCP server (6 tools)
 │   │   ├── youtube.ts         # YouTube player MCP server (4 tools)
+│   │   ├── radio.ts           # Radio Browser MCP server (4 tools)
 │   │   ├── web-search.ts      # Web search MCP server (3 tools, Tavily + Exa)
 │   │   ├── collection.ts      # Local collection manager (SQLite)
 │   │   ├── playlist.ts        # Playlist manager (SQLite)
@@ -351,7 +372,8 @@ crate-cli/
 │   │   └── now-playing.ts     # Now-playing bar overlay
 │   └── utils/
 │       ├── config.ts          # Model resolution, env config
-│       └── env.ts             # .env file read/write utilities
+│       ├── env.ts             # .env file read/write utilities
+│       └── player.ts          # Shared mpv player infrastructure
 ├── tests/
 ├── docs/                      # Design docs and plans
 ├── package.json

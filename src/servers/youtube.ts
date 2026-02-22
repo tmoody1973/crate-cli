@@ -11,41 +11,44 @@
 
 import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { createConnection, type Socket } from "node:net";
-import { writeFileSync, mkdirSync, unlinkSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  spawnMpv,
+  killMpv,
+  sendIpcCommand,
+  getProperty,
+  setProperty,
+  registerCleanup,
+  requireBinary,
+  formatDuration,
+  toolResult,
+  toolError,
+  player,
+  SOCKET_WAIT_MS,
+  type ToolResult,
+} from "../utils/player.js";
+
+// Re-export player accessors so existing imports still work
+export {
+  isPlayerActive,
+  getCurrentTrack,
+  isPlaylistMode,
+  getPlayerProperty,
+  setOnPlayerStopped,
+} from "../utils/player.js";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const MPV_SOCKET = "/tmp/crate-mpv-socket";
-const IPC_TIMEOUT_MS = 3000;
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
-const SOCKET_WAIT_MS = 1500;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-type ToolResult = { content: [{ type: "text"; text: string }] };
-
-function toolResult(data: unknown): ToolResult {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function toolError(error: unknown): ToolResult {
-  const message = error instanceof Error ? error.message : String(error);
-  return { content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }] };
-}
-
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
 
 /** Parse ISO 8601 duration (PT#H#M#S) to seconds */
 function parseIsoDuration(iso: string): number {
@@ -55,203 +58,6 @@ function parseIsoDuration(iso: string): number {
   const minutes = parseInt(match[2] ?? "0", 10);
   const seconds = parseInt(match[3] ?? "0", 10);
   return hours * 3600 + minutes * 60 + seconds;
-}
-
-// ---------------------------------------------------------------------------
-// Binary Detection
-// ---------------------------------------------------------------------------
-
-function checkBinary(name: string): string | null {
-  try {
-    return execFileSync("which", [name], { encoding: "utf-8" }).trim() || null;
-  } catch {
-    return null;
-  }
-}
-
-function requireBinary(name: string): string {
-  const path = checkBinary(name);
-  if (!path) {
-    throw new Error(
-      `${name} is not installed. Install it with: brew install ${name}`,
-    );
-  }
-  return path;
-}
-
-// ---------------------------------------------------------------------------
-// Player State (singleton)
-// ---------------------------------------------------------------------------
-
-interface PlayerState {
-  process: ChildProcess | null;
-  currentTrack: { title: string; url: string; channel?: string; duration?: string } | null;
-  isPlaylist: boolean;
-  playlistPath: string | null;
-}
-
-const player: PlayerState = {
-  process: null,
-  currentTrack: null,
-  isPlaylist: false,
-  playlistPath: null,
-};
-
-// ---------------------------------------------------------------------------
-// Player stopped callback (for UI layer)
-// ---------------------------------------------------------------------------
-
-let onPlayerStopped: (() => void) | null = null;
-
-export function setOnPlayerStopped(cb: (() => void) | null): void {
-  onPlayerStopped = cb;
-}
-
-// ---------------------------------------------------------------------------
-// mpv Management
-// ---------------------------------------------------------------------------
-
-function killMpv(): void {
-  if (player.process) {
-    try {
-      player.process.kill("SIGTERM");
-    } catch {
-      // already dead
-    }
-    player.process = null;
-  }
-  player.currentTrack = null;
-  player.isPlaylist = false;
-
-  // Clean up socket file
-  try {
-    unlinkSync(MPV_SOCKET);
-  } catch {
-    // doesn't exist
-  }
-
-  // Clean up playlist file
-  if (player.playlistPath) {
-    try {
-      unlinkSync(player.playlistPath);
-    } catch {
-      // doesn't exist
-    }
-    player.playlistPath = null;
-  }
-
-  onPlayerStopped?.();
-}
-
-function spawnMpv(target: string, extraArgs: string[] = []): ChildProcess {
-  killMpv();
-
-  const mpvPath = requireBinary("mpv");
-  const args = [
-    "--no-video",
-    `--input-ipc-server=${MPV_SOCKET}`,
-    "--really-quiet",
-    "--ytdl=yes",
-    ...extraArgs,
-    target,
-  ];
-
-  const proc = spawn(mpvPath, args, {
-    stdio: "ignore",
-    detached: false,
-  });
-
-  proc.on("error", () => {
-    player.process = null;
-    player.currentTrack = null;
-    onPlayerStopped?.();
-  });
-
-  proc.on("exit", () => {
-    player.process = null;
-    player.currentTrack = null;
-    onPlayerStopped?.();
-  });
-
-  player.process = proc;
-  return proc;
-}
-
-// ---------------------------------------------------------------------------
-// IPC Helpers
-// ---------------------------------------------------------------------------
-
-function sendIpcCommand(command: unknown[]): Promise<any> {
-  return new Promise((resolve, reject) => {
-    if (!player.process) {
-      return reject(new Error("No active player. Use play_track first."));
-    }
-
-    let socket: Socket;
-    const timeout = setTimeout(() => {
-      socket?.destroy();
-      reject(new Error("IPC timeout — mpv may not be ready"));
-    }, IPC_TIMEOUT_MS);
-
-    socket = createConnection(MPV_SOCKET, () => {
-      socket.write(JSON.stringify({ command }) + "\n");
-    });
-
-    let buffer = "";
-    socket.on("data", (data) => {
-      buffer += data.toString();
-      const newlineIdx = buffer.indexOf("\n");
-      if (newlineIdx !== -1) {
-        clearTimeout(timeout);
-        const line = buffer.slice(0, newlineIdx);
-        socket.destroy();
-        try {
-          resolve(JSON.parse(line));
-        } catch {
-          resolve({ data: line });
-        }
-      }
-    });
-
-    socket.on("error", (err) => {
-      clearTimeout(timeout);
-      reject(new Error(`IPC error: ${err.message}`));
-    });
-  });
-}
-
-async function getProperty(name: string): Promise<any> {
-  const result = await sendIpcCommand(["get_property", name]);
-  return result?.data;
-}
-
-async function setProperty(name: string, value: unknown): Promise<void> {
-  await sendIpcCommand(["set_property", name, value]);
-}
-
-// ---------------------------------------------------------------------------
-// Cleanup on Process Exit
-// ---------------------------------------------------------------------------
-
-let cleanupRegistered = false;
-
-function registerCleanup(): void {
-  if (cleanupRegistered) return;
-  cleanupRegistered = true;
-
-  const cleanup = () => {
-    killMpv();
-  };
-
-  process.on("exit", cleanup);
-  process.on("SIGINT", () => {
-    cleanup();
-    process.exit(0);
-  });
-  process.on("SIGTERM", () => {
-    cleanup();
-    process.exit(0);
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -437,7 +243,7 @@ export async function playTrackHandler(args: {
       }
     }
 
-    spawnMpv(videoUrl);
+    spawnMpv(videoUrl, ["--ytdl=yes"]);
 
     player.currentTrack = {
       title,
@@ -446,6 +252,8 @@ export async function playTrackHandler(args: {
       ...(durationFormatted && { duration: durationFormatted }),
     };
     player.isPlaylist = false;
+    player.isRadio = false;
+    player.stationName = undefined;
 
     // Wait for socket to be created
     await new Promise((resolve) => setTimeout(resolve, SOCKET_WAIT_MS));
@@ -491,7 +299,7 @@ export async function playPlaylistHandler(args: {
     const playlistPath = join(playlistDir, `playlist-${Date.now()}.m3u`);
     writeFileSync(playlistPath, lines.join("\n"), "utf-8");
 
-    const extraArgs = args.shuffle ? ["--shuffle"] : [];
+    const extraArgs = ["--ytdl=yes", ...(args.shuffle ? ["--shuffle"] : [])];
     spawnMpv(playlistPath, ["--playlist-start=0", ...extraArgs]);
 
     player.isPlaylist = true;
@@ -500,6 +308,8 @@ export async function playPlaylistHandler(args: {
       title: `${args.tracks[0]!.artist} - ${args.tracks[0]!.title}`,
       url: playlistPath,
     };
+    player.isRadio = false;
+    player.stationName = undefined;
 
     // Wait for socket
     await new Promise((resolve) => setTimeout(resolve, SOCKET_WAIT_MS));
@@ -575,6 +385,8 @@ export async function playerControlHandler(args: {
           ...(duration != null && { duration: formatDuration(Math.round(duration)) }),
           ...(volume != null && { volume: Math.round(volume) }),
           is_playlist: player.isPlaylist,
+          is_radio: player.isRadio,
+          ...(player.stationName && { station_name: player.stationName }),
         });
       }
 
@@ -714,24 +526,6 @@ const playerControl = tool(
   },
   playerControlHandler,
 );
-
-// ---------------------------------------------------------------------------
-// Player State Accessors (for UI layer)
-// ---------------------------------------------------------------------------
-
-export function isPlayerActive(): boolean {
-  return player.process !== null;
-}
-
-export function getCurrentTrack(): PlayerState["currentTrack"] {
-  return player.currentTrack;
-}
-
-export function isPlaylistMode(): boolean {
-  return player.isPlaylist;
-}
-
-export { getProperty as getPlayerProperty };
 
 // ---------------------------------------------------------------------------
 // Server Export

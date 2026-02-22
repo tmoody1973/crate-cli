@@ -14,9 +14,11 @@ import {
   isPlayerActive,
   getCurrentTrack,
   isPlaylistMode,
+  isRadioMode,
+  getStationName,
   getPlayerProperty,
   setOnPlayerStopped,
-} from "../servers/youtube.js";
+} from "../utils/player.js";
 
 // ---------------------------------------------------------------------------
 // State
@@ -31,6 +33,8 @@ export interface NowPlayingState {
   duration: number; // seconds
   volume: number; // 0-150
   isPlaylist: boolean;
+  isRadio: boolean;
+  stationName?: string;
   playlistPos?: number;
   playlistCount?: number;
 }
@@ -44,6 +48,7 @@ const EMPTY_STATE: NowPlayingState = {
   duration: 0,
   volume: 100,
   isPlaylist: false,
+  isRadio: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -86,21 +91,37 @@ export class NowPlayingBar implements Component {
     const sep = applyBg(chalk.dim("─".repeat(width)), width, bg);
 
     // Line 2: content
-    const icon = s.paused
-      ? chalk.yellow("▐▐")
-      : chalk.green("▶");
+    const icon = s.isRadio
+      ? (s.paused ? chalk.yellow("▐▐") : chalk.magenta("*"))
+      : (s.paused ? chalk.yellow("▐▐") : chalk.green("▶"));
 
     // Title · Channel
-    let label = s.title;
-    if (s.channel) label += chalk.dim(" · ") + chalk.dim(s.channel);
+    // For radio: mpv's media-title updates with ICY metadata (current song).
+    // Show the live track as the title, station name as channel — just like YouTube.
+    let label: string;
+    if (s.isRadio) {
+      const track = s.title;           // media-title from mpv (ICY metadata)
+      const station = s.stationName;
+      if (station && track && track !== station) {
+        // ICY metadata available — e.g. "Miles Davis - So What · KEXP"
+        label = track + chalk.dim(" · ") + chalk.dim(station);
+      } else {
+        label = station ?? track;
+      }
+    } else {
+      label = s.title;
+      if (s.channel) label += chalk.dim(" · ") + chalk.dim(s.channel);
+    }
 
-    // Playlist indicator
-    if (s.isPlaylist && s.playlistPos != null && s.playlistCount != null) {
+    // Radio LIVE badge or playlist indicator
+    if (s.isRadio) {
+      label += " " + chalk.bgMagenta.white.bold(" LIVE ");
+    } else if (s.isPlaylist && s.playlistPos != null && s.playlistCount != null) {
       label += chalk.dim(` [${s.playlistPos}/${s.playlistCount}]`);
     }
 
-    // Time
-    const timeStr = `${formatTime(s.position)} / ${formatTime(s.duration)}`;
+    // Time — radio shows LIVE instead of timestamps
+    const timeStr = s.isRadio ? chalk.magenta("LIVE") : `${formatTime(s.position)} / ${formatTime(s.duration)}`;
 
     // Volume (hide on narrow terminals)
     const showVolume = width >= 80;
@@ -129,7 +150,10 @@ export class NowPlayingBar implements Component {
     const barSpace = width - fixedWidth - labelWidth;
 
     let bar = "";
-    if (barSpace >= 5 && s.duration > 0) {
+    if (s.isRadio && barSpace >= 5) {
+      // Radio: animated-style pulsing bar (no progress — just a visual line)
+      bar = chalk.magenta("~".repeat(barSpace));
+    } else if (barSpace >= 5 && s.duration > 0) {
       const pct = Math.min(s.position / s.duration, 1);
       const filled = Math.round(pct * (barSpace - 1)); // -1 for knob
       const empty = barSpace - 1 - filled;
@@ -169,6 +193,7 @@ export class NowPlayingPoller {
     this.tui.showOverlay(this.component, {
       anchor: "bottom-center",
       width: "100%",
+      margin: { bottom: 1 }, // reserve space for Editor cursor row
       visible: () => this.active,
     });
 
@@ -222,12 +247,14 @@ export class NowPlayingPoller {
           getPlayerProperty("playlist-count").catch(() => undefined),
         ]);
 
-      // Don't show until we have at least position data
-      if (timePos == null && duration == null) return;
+      // Don't show until we have at least position data (radio streams may lack duration)
+      if (timePos == null && duration == null && !isRadioMode()) return;
 
       const track = getCurrentTrack();
       const title = (mediaTitle as string) ?? track?.title ?? "Unknown";
       const channel = track?.channel ?? "";
+
+      const radio = isRadioMode();
 
       const state: NowPlayingState = {
         active: true,
@@ -238,6 +265,8 @@ export class NowPlayingPoller {
         duration: typeof duration === "number" ? duration : 0,
         volume: typeof volume === "number" ? volume : 100,
         isPlaylist: isPlaylistMode(),
+        isRadio: radio,
+        stationName: radio ? getStationName() : undefined,
         ...(typeof playlistPos === "number" && {
           playlistPos: playlistPos + 1, // mpv is 0-indexed
         }),

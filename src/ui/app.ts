@@ -126,6 +126,19 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Playing ${input?.tracks?.length ?? 0} tracks...`;
     case "player_control":
       return input?.action === "now_playing" ? "Checking what's playing..." : `Player: ${input?.action}...`;
+    // Radio tools
+    case "search_radio":
+      return `Searching radio stations for "${input?.query ?? input?.tag ?? "stations"}"...`;
+    case "browse_radio":
+      return input?.tag
+        ? `Browsing ${input.tag} radio stations...`
+        : `Browsing radio stations in ${input?.country ?? "the world"}...`;
+    case "get_radio_tags":
+      return "Loading radio genre tags...";
+    case "play_radio":
+      return input?.name
+        ? `Tuning in to "${input.name}"...`
+        : "Starting radio stream...";
     // Last.fm tools
     case "get_artist_info":
       return `Looking up Last.fm stats for "${input.artist}"...`;
@@ -203,6 +216,7 @@ const SERVER_LABELS: Record<string, string> = {
   wikipedia: "Wikipedia",
   bandcamp: "Bandcamp",
   youtube: "YouTube",
+  radio: "Radio",
   collection: "Collection",
   playlist: "Playlist",
   "web-search": "Web",

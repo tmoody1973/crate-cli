@@ -66,6 +66,14 @@ Audio playback from YouTube. Enhanced search results when YOUTUBE_API_KEY is set
 - **play_playlist** — Play a list of tracks as a playlist via M3U, resolved by yt-dlp on the fly.
 - **player_control** — Control playback: pause, resume, next, previous, stop, now_playing, volume_up, volume_down, set_volume.
 
+### Radio Browser (always available, no API key)
+30,000+ live internet radio stations worldwide. Use for live listening, genre exploration, and discovering stations by region.
+- **search_radio** — Search stations by name, genre tag, country, or language.
+- **browse_radio** — Browse top stations by tag or country, sorted by popularity.
+- **get_radio_tags** — List available genre/style tags with station counts.
+- **play_radio** — Stream a live radio station via mpv. Provide a stream URL or station name.
+Player controls (pause, volume, stop) work the same as YouTube — use player_control.
+
 ### Wikipedia (always available, no API key)
 Narrative context, biographical depth, genre histories, cultural movements, and scene overviews that structured databases can't provide. Uses free public Wikipedia endpoints. When Wikimedia Enterprise credentials are configured (WIKIMEDIA_USERNAME/PASSWORD), article content is richer. Use these tools for:
 - **search_articles** — Search Wikipedia for articles by keyword. Returns titles, descriptions, and excerpts. Use to find artist bios, genre histories, label backgrounds, venue info, and cultural context.
