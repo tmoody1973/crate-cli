@@ -33,6 +33,12 @@ export class CrateAgent {
     return this.totalCostUsd;
   }
 
+  /** Reload servers from current process.env (for hot-reloading after key changes). */
+  reloadServers(): void {
+    this.servers = getActiveServers();
+    this.memoryEnabled = !!process.env.MEM0_API_KEY;
+  }
+
   switchModel(alias: string): string {
     const resolved = resolveModel(alias);
     this.model = resolved;

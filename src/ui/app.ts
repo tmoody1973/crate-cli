@@ -21,6 +21,7 @@ import {
 } from "../servers/youtube.js";
 import { collectionStatsHandler } from "../servers/collection.js";
 import { playlistListHandler } from "../servers/playlist.js";
+import { showKeysPanel } from "./keys-panel.js";
 
 function addChildBeforeEditor(tui: TUI, child: any): void {
   const children = tui.children;
@@ -90,13 +91,17 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Reading full Wikipedia article for "${input.title}"...`;
     // Bandcamp tools
     case "search_bandcamp":
-      return `Searching Bandcamp for "${input?.query ?? "music"}"...`;
+      return input?.location
+        ? `Searching Bandcamp for "${input?.query ?? "music"}" in ${input.location}...`
+        : `Searching Bandcamp for "${input?.query ?? "music"}"...`;
     case "get_artist_page":
       return "Fetching Bandcamp artist page...";
     case "get_album":
       return "Fetching album details from Bandcamp...";
     case "discover_music":
-      return `Browsing Bandcamp ${input?.tag ?? "music"} releases...`;
+      return input?.location
+        ? `Discovering ${input?.tag ?? "music"} in ${input.location} on Bandcamp...`
+        : `Browsing Bandcamp ${input?.tag ?? "music"} releases...`;
     case "get_tag_info":
       return `Looking up Bandcamp tag "${input?.tag ?? ""}"...`;
     case "get_bandcamp_editorial":
@@ -159,6 +164,13 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Exporting playlist as ${input.format ?? "markdown"}...`;
     case "playlist_delete":
       return "Deleting playlist...";
+    // Web Search tools
+    case "search_web":
+      return `Searching web for "${input?.query ?? "music"}"${input?.provider === "exa" ? " (neural)" : ""}...`;
+    case "find_similar":
+      return `Finding pages similar to ${input?.url ?? "URL"}...`;
+    case "extract_content":
+      return `Extracting content from ${input?.urls?.length ?? 1} URL(s)...`;
     // Memory tools
     case "get_user_context":
       return "Searching memories...";
@@ -389,6 +401,10 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
       tui.requestRender();
       break;
     }
+    case "keys": {
+      showKeysPanel(tui, agent);
+      break;
+    }
     case "quit":
     case "exit": {
       if ((agent as any).endSession) {
@@ -437,6 +453,7 @@ export function createApp(agent: CrateAgent): TUI {
     { name: "cost", description: "Show token usage and cost" },
     { name: "clear", description: "Clear the screen" },
     { name: "servers", description: "Show active/inactive servers" },
+    { name: "keys", description: "Manage API keys" },
     { name: "quit", description: "Exit Crate" },
   ];
 

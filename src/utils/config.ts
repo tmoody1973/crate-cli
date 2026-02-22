@@ -9,6 +9,8 @@ const KEY_GATED_SERVERS: Record<string, string[]> = {
   lastfm: ["LASTFM_API_KEY"],
   genius: ["GENIUS_ACCESS_TOKEN"],
   events: ["TICKETMASTER_API_KEY"],
+  youtube: ["YOUTUBE_API_KEY"],
+  "web-search": ["TAVILY_API_KEY", "EXA_API_KEY"],
   // wikipedia: always enabled (free endpoints; Enterprise credentials optional)
 };
 

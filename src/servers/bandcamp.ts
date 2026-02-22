@@ -53,16 +53,52 @@ function toolError(error: unknown): ToolResult {
 // Fetch Wrapper
 // ---------------------------------------------------------------------------
 
-export async function bandcampFetch(url: string): Promise<string | null> {
+export async function bandcampFetch(url: string, options?: { method?: string; body?: unknown }): Promise<string | null> {
   try {
     await rateLimit();
-    const resp = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT },
-    });
+    const headers: Record<string, string> = { "User-Agent": USER_AGENT };
+    const init: RequestInit = { headers };
+    if (options?.method) init.method = options.method;
+    if (options?.body != null) {
+      headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(options.body);
+    }
+    const resp = await fetch(url, init);
     if (!resp.ok) return null;
     return await resp.text();
   } catch {
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location Resolver (city name → GeoNames ID)
+// ---------------------------------------------------------------------------
+
+const GEONAME_SEARCH_URL = "https://bandcamp.com/api/location/1/geoname_search";
+
+export interface GeonameResult {
+  id: number;
+  name: string;
+  fullname: string;
+}
+
+export async function resolveLocation(query: string): Promise<GeonameResult[]> {
+  const body = await bandcampFetch(GEONAME_SEARCH_URL, {
+    method: "POST",
+    body: { q: query, n: 5, geocoder_fallback: true },
+  });
+  if (!body) return [];
+  try {
+    const json = JSON.parse(body);
+    if (!json.ok) return [];
+    return (json.results ?? []).map((r: any) => ({
+      id: Number(r.id),
+      name: r.name,
+      fullname: r.fullname,
+    }));
+  } catch {
+    return [];
   }
 }
 
@@ -156,11 +192,15 @@ function formatDuration(seconds: number): string {
 export async function searchBandcampHandler(args: {
   query: string;
   item_type?: "artist" | "album" | "track" | "label";
+  location?: string;
 }) {
   try {
     let url = `https://bandcamp.com/search?q=${encodeURIComponent(args.query)}`;
     if (args.item_type && ITEM_TYPE_MAP[args.item_type]) {
       url += `&item_type=${ITEM_TYPE_MAP[args.item_type]}`;
+    }
+    if (args.location) {
+      url += `&location=${encodeURIComponent(args.location)}`;
     }
 
     const html = await bandcampFetch(url);
@@ -322,6 +362,7 @@ const searchBandcamp = tool(
   "search_bandcamp",
   "Search Bandcamp for artists, albums, tracks, or labels. " +
     "Returns names, URLs, tags, and locations. " +
+    "Supports location filtering to find artists from a specific city or region. " +
     "Use for finding independent artists and releases on Bandcamp.",
   {
     query: z.string().describe("Search terms (e.g. 'Boards of Canada', 'lo-fi hip hop')"),
@@ -329,6 +370,10 @@ const searchBandcamp = tool(
       .enum(["artist", "album", "track", "label"])
       .optional()
       .describe("Filter by type (default: all types)"),
+    location: z
+      .string()
+      .optional()
+      .describe("Filter results by city/region (e.g. 'Milwaukee', 'Chicago', 'Detroit')"),
   },
   searchBandcampHandler,
 );
@@ -420,19 +465,42 @@ const getAlbum = tool(
 // discover_music handler
 // ---------------------------------------------------------------------------
 
+const FORMAT_MAP: Record<string, number> = {
+  digital: 1, vinyl: 2, cd: 3, cassette: 4,
+};
+
 export async function discoverMusicHandler(args: {
   tag: string;
   sort?: "top" | "new" | "rec";
   format?: "vinyl" | "cd" | "cassette" | "digital";
-  location?: number;
+  location?: string;
 }) {
   try {
-    const sort = SORT_MAP[args.sort ?? "top"] ?? "pop";
-    let url = `${DISCOVER_URL}?tag=${encodeURIComponent(args.tag)}&sort=${sort}`;
-    if (args.format) url += `&format=${encodeURIComponent(args.format)}`;
-    if (args.location) url += `&geoname_id=${args.location}`;
+    // Resolve location string → GeoNames ID
+    let geonameId = 0;
+    let resolvedLocation: string | undefined;
+    if (args.location) {
+      const results = await resolveLocation(args.location);
+      if (results.length > 0) {
+        geonameId = results[0]!.id;
+        resolvedLocation = results[0]!.fullname;
+      }
+    }
 
-    const body = await bandcampFetch(url);
+    const slice = SORT_MAP[args.sort ?? "top"] ?? "pop";
+
+    const payload: Record<string, unknown> = {
+      tag_norm_names: [args.tag],
+      slice,
+      cursor: "*",
+      size: 60,
+      include_result_types: ["a", "s"],
+      geoname_id: geonameId,
+      category_id: args.format ? (FORMAT_MAP[args.format] ?? 0) : 0,
+      time_facet_id: null,
+    };
+
+    const body = await bandcampFetch(DISCOVER_URL, { method: "POST", body: payload });
     if (!body) throw new Error(`Failed to fetch Bandcamp discover results for tag: ${args.tag}`);
 
     const json = JSON.parse(body);
@@ -447,6 +515,7 @@ export async function discoverMusicHandler(args: {
         title: item.primary_text,
         artist: item.secondary_text,
         url: itemUrl,
+        ...(item.featured_track?.band_location && { location: item.featured_track.band_location }),
         ...(item.art_id && { art_url: `https://f4.bcbits.com/img/a${item.art_id}_0.jpg` }),
         ...(item.genre_text && { genre: item.genre_text }),
         ...(item.release_date && { release_date: item.release_date }),
@@ -456,6 +525,7 @@ export async function discoverMusicHandler(args: {
     return toolResult({
       tag: args.tag,
       sort: args.sort ?? "top",
+      ...(resolvedLocation && { location: resolvedLocation, geoname_id: geonameId }),
       result_count: items.length,
       items,
     });
@@ -468,12 +538,13 @@ const discoverMusic = tool(
   "discover_music",
   "Browse Bandcamp's discovery system by genre/tag. " +
     "Returns trending and new releases for a tag with optional sort and format filters. " +
-    "Great for finding new independent music by genre.",
+    "Supports location filtering by city name (e.g. 'Milwaukee', 'Detroit', 'Berlin'). " +
+    "Use this for discovering local music scenes.",
   {
     tag: z.string().describe("Genre tag (e.g. 'ambient', 'hip-hop-rap', 'post-punk')"),
     sort: z.enum(["top", "new", "rec"]).optional().describe("Sort order (default: top)"),
     format: z.enum(["vinyl", "cd", "cassette", "digital"]).optional().describe("Physical format filter"),
-    location: z.number().optional().describe("GeoNames ID for location filter"),
+    location: z.string().optional().describe("City or region name for location filter (e.g. 'Milwaukee', 'Detroit', 'London')"),
   },
   discoverMusicHandler,
 );

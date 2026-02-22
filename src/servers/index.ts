@@ -9,6 +9,7 @@ import { youtubeServer } from "./youtube.js";
 import { collectionServer } from "./collection.js";
 import { playlistServer } from "./playlist.js";
 import { memoryServer } from "./memory.js";
+import { webSearchServer, hasTavily, hasExa } from "./web-search.js";
 
 export function getActiveServers(): Record<string, any> {
   const servers: Record<string, any> = {
@@ -29,6 +30,7 @@ export function getActiveServers(): Record<string, any> {
   servers.youtube = youtubeServer; // Always available (yt-dlp + mpv)
   servers.collection = collectionServer; // Always available (local SQLite)
   servers.playlist = playlistServer; // Always available (local SQLite)
+  if (hasTavily() || hasExa()) servers["web-search"] = webSearchServer;
 
   return servers;
 }
@@ -42,7 +44,7 @@ export function getServerStatus(): { active: string[]; inactive: string[] } {
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
-    "collection", "playlist",
+    "collection", "playlist", "web-search",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };

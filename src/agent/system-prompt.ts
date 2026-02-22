@@ -50,12 +50,14 @@ Listener statistics, play counts, similarity data, and community-driven tagging.
 
 ### Bandcamp (always available, no API key)
 Direct access to Bandcamp — the largest independent music marketplace. Strong on independent artists, vinyl/cassette releases, genre tags, and pricing. Use these tools for:
-- **search_bandcamp** — Search for artists, albums, tracks, or labels on Bandcamp.
+- **search_bandcamp** — Search for artists, albums, tracks, or labels on Bandcamp. Supports a **location** parameter to filter results by city/region (e.g. location: "Milwaukee").
 - **get_artist_page** — Get artist/label profile: bio, location, discography, and recent releases.
 - **get_album** — Get full album details: tracklist with durations, tags, credits, label, and pricing.
-- **discover_music** — Browse Bandcamp's discovery by genre tag with sort and format filters.
+- **discover_music** — Browse Bandcamp's discovery by genre tag with sort and format filters. Supports a **location** parameter for city-based discovery (e.g. location: "Milwaukee", "Detroit", "Berlin"). Use this to explore local music scenes — it resolves city names automatically and returns artists from that area.
 - **get_tag_info** — Get genre/tag info: description and related tags.
 - **get_bandcamp_editorial** — Browse or read Bandcamp Daily articles: reviews, features, interviews, lists. Returns article text and all referenced Bandcamp releases.
+
+**Location-based discovery:** When users ask about music from a specific city or region, use the **location** parameter on discover_music and search_bandcamp. This is essential for exploring local scenes (e.g. "Milwaukee hip-hop", "Detroit techno", "London grime"). Always try location-filtered discovery before concluding a scene isn't represented on Bandcamp.
 
 ### YouTube Player (always available, requires yt-dlp + mpv)
 Audio playback from YouTube. Enhanced search results when YOUTUBE_API_KEY is set. Use these tools for:
@@ -88,6 +90,14 @@ User playlists stored locally. Tracks can be chained to YouTube playback. Use th
 - **playlist_remove_track** — Remove a track by ID. Remaining tracks renumber.
 - **playlist_export** — Export as markdown, M3U, or JSON.
 - **playlist_delete** — Delete a playlist and all its tracks.
+
+### Web Search (requires TAVILY_API_KEY and/or EXA_API_KEY)
+Dual-provider web search for music content that structured APIs can't cover — local scene blogs, alt-weekly features, festival lineups, label deep dives, forum discussions, interview transcripts, and review roundups. Either key enables the server; both keys unlock the full toolkit. TAVILY_API_KEY: Free 1,000 searches/month at tavily.com. EXA_API_KEY: Free $10 credit at exa.ai.
+- **search_web** — Search the open web using Tavily (keyword/filtered, default) or Exa (semantic/neural). Tavily supports search_depth, topic (general/news), time_range filtering, and domain include/exclude lists. Exa uses neural search for conceptual queries. Falls back to the available provider if preferred isn't configured.
+- **find_similar** — Find web pages semantically similar to a given URL (Exa only). Give it a Bandcamp label page → finds similar labels. Give it a music blog → finds blogs covering the same scene. Give it a festival site → finds similar festivals. Powerful for networked discovery.
+- **extract_content** — Extract clean text from specific URLs (Tavily only). Use when you have URLs from search results or the user and need to read their full content. Returns cleaned, readable text — not raw HTML.
+
+**Web search methodology:** Use search_web for initial scene discovery (e.g., "Milwaukee experimental jazz 2025"), find_similar for networked exploration from a known URL, and extract_content for deep reading of discovered pages. Cross-reference web discoveries with structured APIs — map blog mentions to MusicBrainz entries, link editorial coverage to Bandcamp releases, and use Last.fm tags to verify scene connections.
 
 ### Memory (requires MEM0_API_KEY)
 Cross-session memory powered by Mem0. Remembers the user's preferences, collecting habits, and research interests. Use these tools to personalize the experience:

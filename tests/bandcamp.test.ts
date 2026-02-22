@@ -65,6 +65,36 @@ describe("bandcamp", () => {
     });
   });
 
+  describe("resolveLocation", () => {
+    it("resolves city name to GeoNames results", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({
+          ok: true,
+          results: [
+            { id: "5263045", name: "Milwaukee", fullname: "Milwaukee, Wisconsin" },
+            { id: "4479663", name: "Milwaukee", fullname: "Milwaukee, North Carolina" },
+          ],
+        }),
+      });
+
+      const { resolveLocation } = await import("../src/servers/bandcamp.js");
+      const results = await resolveLocation("Milwaukee");
+
+      expect(results).toHaveLength(2);
+      expect(results[0].id).toBe(5263045);
+      expect(results[0].fullname).toBe("Milwaukee, Wisconsin");
+    });
+
+    it("returns empty array on failure", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      const { resolveLocation } = await import("../src/servers/bandcamp.js");
+      const results = await resolveLocation("Nowhere");
+      expect(results).toEqual([]);
+    });
+  });
+
   describe("extractTralbum", () => {
     it("extracts tralbum data from script attribute", async () => {
       const tralbum = JSON.stringify({
@@ -150,6 +180,20 @@ describe("bandcamp", () => {
 
       const calledUrl = mockFetch.mock.calls[0][0] as string;
       expect(calledUrl).toContain("item_type=a");
+    });
+
+    it("passes location parameter in search URL", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => `<div class="result-items"></div>`,
+      });
+
+      const { searchBandcampHandler } = await import("../src/servers/bandcamp.js");
+      await searchBandcampHandler({ query: "hip hop", item_type: "artist", location: "Milwaukee" });
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain("location=Milwaukee");
+      expect(calledUrl).toContain("item_type=b");
     });
 
     it("returns error on fetch failure", async () => {
@@ -392,9 +436,17 @@ describe("bandcamp", () => {
       expect(data.result_count).toBe(1);
       expect(data.items[0].title).toBe("Ambient Album");
       expect(data.items[0].artist).toBe("Ambient Artist");
+
+      // Verify POST request
+      const callArgs = mockFetch.mock.calls[0];
+      const init = callArgs[1] as RequestInit;
+      expect(init.method).toBe("POST");
+      const body = JSON.parse(init.body as string);
+      expect(body.tag_norm_names).toEqual(["ambient"]);
+      expect(body.geoname_id).toBe(0);
     });
 
-    it("passes sort and format parameters", async () => {
+    it("passes sort and format parameters via POST body", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         text: async () => JSON.stringify({ items: [] }),
@@ -403,9 +455,55 @@ describe("bandcamp", () => {
       const { discoverMusicHandler } = await import("../src/servers/bandcamp.js");
       await discoverMusicHandler({ tag: "electronic", sort: "new", format: "vinyl" });
 
-      const calledUrl = mockFetch.mock.calls[0][0] as string;
-      expect(calledUrl).toContain("sort=date");
-      expect(calledUrl).toContain("format=vinyl");
+      const callArgs = mockFetch.mock.calls[0];
+      const calledUrl = callArgs[0] as string;
+      expect(calledUrl).toBe("https://bandcamp.com/api/discover/1/discover_web");
+
+      const init = callArgs[1] as RequestInit;
+      expect(init.method).toBe("POST");
+      const body = JSON.parse(init.body as string);
+      expect(body.tag_norm_names).toEqual(["electronic"]);
+      expect(body.slice).toBe("date");
+      expect(body.category_id).toBe(2); // vinyl
+    });
+
+    it("resolves location string to geoname_id", async () => {
+      // First call: geoname_search for location resolution
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({
+          ok: true,
+          results: [{ id: "5263045", name: "Milwaukee", fullname: "Milwaukee, Wisconsin" }],
+        }),
+      });
+      // Second call: discover_web POST
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({
+          items: [
+            {
+              primary_text: "Local Album",
+              secondary_text: "MKE Artist",
+              url_hints: { custom_domain: null, slug: "mke-artist", item_type: "a", item_slug: "local-album" },
+              featured_track: { band_location: "Milwaukee, Wisconsin" },
+            },
+          ],
+        }),
+      });
+
+      const { discoverMusicHandler } = await import("../src/servers/bandcamp.js");
+      const result = await discoverMusicHandler({ tag: "hip-hop-rap", location: "Milwaukee" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.location).toBe("Milwaukee, Wisconsin");
+      expect(data.geoname_id).toBe(5263045);
+      expect(data.items[0].title).toBe("Local Album");
+      expect(data.items[0].location).toBe("Milwaukee, Wisconsin");
+
+      // Verify discover POST body has the resolved geoname_id
+      const discoverCall = mockFetch.mock.calls[1];
+      const body = JSON.parse((discoverCall[1] as RequestInit).body as string);
+      expect(body.geoname_id).toBe(5263045);
     });
 
     it("returns error on fetch failure", async () => {
