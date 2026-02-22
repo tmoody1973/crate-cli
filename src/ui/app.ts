@@ -19,6 +19,8 @@ import {
   playerControlHandler,
   playTrackHandler,
 } from "../servers/youtube.js";
+import { collectionStatsHandler } from "../servers/collection.js";
+import { playlistListHandler } from "../servers/playlist.js";
 
 function addChildBeforeEditor(tui: TUI, child: any): void {
   const children = tui.children;
@@ -127,6 +129,45 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Fetching top "${input.tag}" artists from Last.fm...`;
     case "get_geo_top_tracks":
       return `Fetching top tracks in ${input.country} from Last.fm...`;
+    // Collection tools
+    case "collection_add":
+      return `Adding "${input.title}" by ${input.artist} to collection...`;
+    case "collection_search":
+      return input.query
+        ? `Searching collection for "${input.query}"...`
+        : "Searching collection...";
+    case "collection_update":
+      return `Updating record #${input.id}...`;
+    case "collection_remove":
+      return `Removing record #${input.id} from collection...`;
+    case "collection_stats":
+      return "Getting collection stats...";
+    case "collection_tags":
+      return "Fetching collection tags...";
+    // Playlist tools
+    case "playlist_create":
+      return `Creating playlist "${input.name}"...`;
+    case "playlist_add_track":
+      return `Adding "${input.title}" by ${input.artist} to playlist...`;
+    case "playlist_list":
+      return "Listing playlists...";
+    case "playlist_get":
+      return "Loading playlist...";
+    case "playlist_remove_track":
+      return "Removing track from playlist...";
+    case "playlist_export":
+      return `Exporting playlist as ${input.format ?? "markdown"}...`;
+    case "playlist_delete":
+      return "Deleting playlist...";
+    // Memory tools
+    case "get_user_context":
+      return "Searching memories...";
+    case "update_user_memory":
+      return "Updating memories...";
+    case "remember_about_user":
+      return "Remembering...";
+    case "list_user_memories":
+      return "Loading memories...";
     default:
       return `Using ${bare.replace(/_/g, " ")}...`;
   }
@@ -296,8 +337,63 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
       tui.requestRender();
       break;
     }
+    case "collection": {
+      const result = await collectionStatsHandler();
+      const data = JSON.parse(result.content[0].text);
+      if (data.error) {
+        addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${data.error}`), 1, 0));
+      } else {
+        const lines = [
+          chalk.bold("Collection Stats"),
+          `  Total: ${chalk.cyan(String(data.total))}`,
+        ];
+        if (data.by_status?.length) {
+          lines.push("", chalk.bold("  By status:"));
+          for (const s of data.by_status as any[]) {
+            lines.push(`    ${s.status ?? "unknown"}: ${chalk.cyan(String(s.count))}`);
+          }
+        }
+        if (data.by_format?.length) {
+          lines.push("", chalk.bold("  By format:"));
+          for (const f of data.by_format as any[]) {
+            lines.push(`    ${f.format ?? "unknown"}: ${chalk.cyan(String(f.count))}`);
+          }
+        }
+        if (data.avg_rating !== null && data.avg_rating !== undefined) {
+          lines.push("", `  Avg rating: ${chalk.cyan(String(data.avg_rating))}/5`);
+        }
+        if (data.top_tags?.length) {
+          const tags = (data.top_tags as any[]).map((t: any) => t.tag).join(", ");
+          lines.push("", `  Top tags: ${chalk.dim(tags)}`);
+        }
+        addChildBeforeEditor(tui, new Text(lines.join("\n"), 1, 1));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "playlists": {
+      const result = await playlistListHandler();
+      const data = JSON.parse(result.content[0].text);
+      if (data.error) {
+        addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${data.error}`), 1, 0));
+      } else if (!data.playlists?.length) {
+        addChildBeforeEditor(tui, new Text(chalk.dim("No playlists yet. Ask Crate to create one!"), 1, 0));
+      } else {
+        const lines = [chalk.bold("Playlists")];
+        for (const p of data.playlists as any[]) {
+          const desc = p.description ? chalk.dim(` — ${p.description}`) : "";
+          lines.push(`  ${chalk.cyan(`#${p.id}`)} ${p.name} ${chalk.dim(`(${p.track_count} tracks)`)}${desc}`);
+        }
+        addChildBeforeEditor(tui, new Text(lines.join("\n"), 1, 1));
+      }
+      tui.requestRender();
+      break;
+    }
     case "quit":
     case "exit": {
+      if ((agent as any).endSession) {
+        try { await (agent as any).endSession(); } catch {}
+      }
       tui.stop();
       process.exit(0);
     }
@@ -332,6 +428,9 @@ export function createApp(agent: CrateAgent): TUI {
     { name: "stop", description: "Stop playback" },
     { name: "vol", description: "Set or show volume (/vol [0-150])" },
     { name: "np", description: "Now playing info" },
+    // Collection & Playlists
+    { name: "collection", description: "Show collection stats" },
+    { name: "playlists", description: "List all playlists" },
     // Session
     { name: "help", description: "Show available commands" },
     { name: "model", description: "Show or switch model (sonnet, opus, haiku)" },

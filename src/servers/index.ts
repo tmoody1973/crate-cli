@@ -6,6 +6,9 @@ import { lastfmServer } from "./lastfm.js";
 import { wikipediaServer } from "./wikipedia.js";
 import { bandcampServer } from "./bandcamp.js";
 import { youtubeServer } from "./youtube.js";
+import { collectionServer } from "./collection.js";
+import { playlistServer } from "./playlist.js";
+import { memoryServer } from "./memory.js";
 
 export function getActiveServers(): Record<string, any> {
   const servers: Record<string, any> = {
@@ -15,7 +18,7 @@ export function getActiveServers(): Record<string, any> {
   // Key-gated servers:
   if (process.env.DISCOGS_KEY && process.env.DISCOGS_SECRET)
     servers.discogs = discogsServer;
-  // if (process.env.MEM0_API_KEY) servers.memory = memoryServer;
+  if (process.env.MEM0_API_KEY) servers.memory = memoryServer;
   if (process.env.LASTFM_API_KEY) servers.lastfm = lastfmServer;
   // if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET)
   //   servers.spotify = spotifyServer;
@@ -24,6 +27,8 @@ export function getActiveServers(): Record<string, any> {
   servers.wikipedia = wikipediaServer; // Always available (free endpoints; Enterprise optional)
   servers.bandcamp = bandcampServer; // Always available (no API key required)
   servers.youtube = youtubeServer; // Always available (yt-dlp + mpv)
+  servers.collection = collectionServer; // Always available (local SQLite)
+  servers.playlist = playlistServer; // Always available (local SQLite)
 
   return servers;
 }
@@ -37,6 +42,7 @@ export function getServerStatus(): { active: string[]; inactive: string[] } {
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
+    "collection", "playlist",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };

@@ -106,6 +106,10 @@ ${chalk.bold("Player")}
   ${chalk.cyan("/vol")}${chalk.dim(" [0-150]")}    Set or show volume
   ${chalk.cyan("/np")}              Now playing info
 
+${chalk.bold("Collection & Playlists")}
+  ${chalk.cyan("/collection")}      Show collection stats
+  ${chalk.cyan("/playlists")}       List all playlists
+
 ${chalk.bold("Session")}
   ${chalk.cyan("/model")}${chalk.dim(" [name]")}   Show or switch model (sonnet, opus, haiku)
   ${chalk.cyan("/cost")}            Show token usage and cost
