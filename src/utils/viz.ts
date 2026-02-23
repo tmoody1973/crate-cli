@@ -15,6 +15,13 @@ export interface PathStep {
   artist: string;
   connection?: string; // e.g., "influenced", "co-mentioned", "collaborated"
   evidence?: string; // e.g., "Last.fm similarity: 0.82", "Pitchfork review"
+  sources?: SourceCitation[]; // Review/article URLs supporting this connection
+}
+
+export interface SourceCitation {
+  url: string;
+  title?: string;
+  domain: string; // e.g., "pitchfork.com"
 }
 
 export interface Connection {
@@ -23,6 +30,7 @@ export interface Connection {
   type: string; // "influence", "co_mention", "collaboration", "sample", "similar"
   evidence?: string;
   weight?: number; // 0-1 strength
+  sources?: SourceCitation[]; // Review/article URLs supporting this connection
 }
 
 export interface GraphNode {

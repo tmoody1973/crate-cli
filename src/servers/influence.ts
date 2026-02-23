@@ -21,7 +21,7 @@ import {
   hasExa,
 } from "./web-search.js";
 import { renderInfluencePath, renderInlineChain } from "../utils/viz.js";
-import type { PathStep, Connection } from "../utils/viz.js";
+import type { PathStep, Connection, SourceCitation } from "../utils/viz.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -246,6 +246,11 @@ export async function searchReviewsHandler(args: {
       album: album ?? null,
       review_count: reviews.length,
       reviews,
+      sources: reviews.map((r: any) => ({
+        url: r.url,
+        title: r.title,
+        domain: r.source,
+      })).filter((s: any) => s.url),
     });
   } catch (err) {
     return toolError(err);
@@ -285,12 +290,17 @@ export async function extractInfluencesHandler(args: {
 
     const coMentions = extractArtistMentions(text, artist);
 
+    const source: SourceCitation | undefined = args.review_url
+      ? { url: args.review_url, domain: extractDomain(args.review_url) }
+      : undefined;
+
     return toolResult({
       subject_artist: artist,
       co_mentions: coMentions.slice(0, 30), // Cap at 30 for token efficiency
       total_found: coMentions.length,
       influence_mentions: coMentions.filter((m) => m.influenceContext).length,
       review_source: args.review_url ?? "provided_text",
+      source,
     });
   } catch (err) {
     return toolError(err);
@@ -332,13 +342,15 @@ export async function traceInfluencePathHandler(args: {
       directContent.toLowerCase().includes(to_artist.toLowerCase())
     ) {
       // Direct connection found
-      const evidence = (directData.results ?? [])
+      const directResults = directData.results ?? [];
+      const evidence = directResults
         .slice(0, 1)
         .map((r: any) => `${extractDomain(r.url)}: "${truncate(r.content ?? "", 100)}"`)
         .join("; ");
+      const sources = extractCitations(directResults);
 
       path.push(
-        { artist: from_artist, connection: "connected", evidence },
+        { artist: from_artist, connection: "connected", evidence, sources },
         { artist: to_artist },
       );
 
@@ -351,6 +363,7 @@ export async function traceInfluencePathHandler(args: {
         path,
         depth: 1,
         total_explored: explored.length,
+        sources,
         formatted_path: formatted,
         inline_path: inline,
       });
@@ -404,16 +417,22 @@ export async function traceInfluencePathHandler(args: {
           (m) => m.name.toLowerCase() === bridge.name.toLowerCase(),
         );
 
+        const fromSources = extractCitations(fromData.results ?? []);
+        const toSources = extractCitations(toData.results ?? []);
+        const allSources = [...fromSources, ...toSources];
+
         path.push(
           {
             artist: from_artist,
             connection: "connected via reviews",
             evidence: fromEvidence?.context ? truncate(fromEvidence.context, 80) : undefined,
+            sources: fromSources,
           },
           {
             artist: bridge.name,
             connection: "connected via reviews",
             evidence: bridge.context ? truncate(bridge.context, 80) : undefined,
+            sources: toSources,
           },
           { artist: to_artist },
         );
@@ -430,6 +449,7 @@ export async function traceInfluencePathHandler(args: {
           depth: 2,
           bridge_artist: bridge.name,
           total_explored: explored.length,
+          sources: allSources,
           formatted_path: formatted,
           inline_path: inline,
         });
@@ -508,6 +528,13 @@ export async function findBridgeArtistsHandler(args: {
     const genreANames = new Set(genreAMentions.map((m) => m.name.toLowerCase()));
     const genreBOverlap = genreBMentions.filter((m) => genreANames.has(m.name.toLowerCase()));
 
+    // Collect all source citations
+    const allCitations = [
+      ...extractCitations(searchData.results ?? []),
+      ...extractCitations(genreAData.results ?? []),
+      ...extractCitations(genreBData.results ?? []),
+    ];
+
     // Combine crossover mentions with direct bridge search mentions
     const allBridges = new Map<string, { name: string; evidence: string[]; score: number }>();
 
@@ -552,6 +579,7 @@ export async function findBridgeArtistsHandler(args: {
       genre_b,
       bridge_count: bridges.length,
       bridges,
+      sources: allCitations,
       sources_searched: (searchData.results ?? []).length +
         (genreAData.results ?? []).length +
         (genreBData.results ?? []).length,
@@ -571,6 +599,17 @@ function extractDomain(url: string): string {
   } catch {
     return url;
   }
+}
+
+/** Build SourceCitation objects from web search results */
+function extractCitations(results: any[]): SourceCitation[] {
+  return results
+    .filter((r: any) => r.url)
+    .map((r: any) => ({
+      url: r.url,
+      title: r.title ?? undefined,
+      domain: extractDomain(r.url),
+    }));
 }
 
 // ---------------------------------------------------------------------------
