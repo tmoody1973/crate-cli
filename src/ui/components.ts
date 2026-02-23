@@ -79,7 +79,7 @@ const DESCRIPTION = `Crate is an AI-powered music research agent for DJs, collec
 export const WELCOME_TEXT = `${BANNER}
 ${SEPARATOR}
 ${chalk.bold.white("deep music research agent")}${chalk.dim("                          v0.5.0")}
-${chalk.dim("MusicBrainz · Discogs · Genius · Wikipedia · Radio · +5")}
+${chalk.dim("MusicBrainz · Discogs · Genius · Wikipedia · Influence · +5")}
 
 ${chalk.dim(DESCRIPTION)}
 

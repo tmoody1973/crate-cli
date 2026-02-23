@@ -193,6 +193,15 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Finding pages similar to ${input?.url ?? "URL"}...`;
     case "extract_content":
       return `Extracting content from ${input?.urls?.length ?? 1} URL(s)...`;
+    // Influence network tools
+    case "search_reviews":
+      return `Searching for reviews of "${input?.artist ?? "artist"}"${input?.album ? ` — ${input.album}` : ""}...`;
+    case "extract_influences":
+      return `Extracting artist influences from review...`;
+    case "trace_influence_path":
+      return `Tracing influence path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}...`;
+    case "find_bridge_artists":
+      return `Finding bridge artists: ${input?.genre_a ?? "?"} ↔ ${input?.genre_b ?? "?"}...`;
     // News / RSS tools
     case "search_music_news":
       return `Searching music news for "${input?.query ?? "..."}"...`;
@@ -228,6 +237,7 @@ const SERVER_LABELS: Record<string, string> = {
   collection: "Collection",
   playlist: "Playlist",
   websearch: "Web",
+  influence: "Influence",
   memory: "Memory",
 };
 
