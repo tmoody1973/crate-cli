@@ -195,13 +195,13 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Extracting content from ${input?.urls?.length ?? 1} URL(s)...`;
     // Influence network tools
     case "search_reviews":
-      return `Searching for reviews of "${input?.artist ?? "artist"}"${input?.album ? ` — ${input.album}` : ""}...`;
+      return `🔍 Searching music publications for "${input?.artist ?? "artist"}"${input?.album ? ` — ${input.album}` : ""}…`;
     case "extract_influences":
-      return `Extracting artist influences from review...`;
+      return `🧬 Extracting co-mentions & influence signals from review text…`;
     case "trace_influence_path":
-      return `Tracing influence path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}...`;
+      return `🔗 Tracing influence path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}  ⟨multi-step⟩`;
     case "find_bridge_artists":
-      return `Finding bridge artists: ${input?.genre_a ?? "?"} ↔ ${input?.genre_b ?? "?"}...`;
+      return `🌉 Finding bridge artists: ${input?.genre_a ?? "?"} ↔ ${input?.genre_b ?? "?"}  ⟨multi-step⟩`;
     // News / RSS tools
     case "search_music_news":
       return `Searching music news for "${input?.query ?? "..."}"...`;
@@ -592,10 +592,76 @@ export function createApp(agent: CrateAgent): TUI {
       tui,
       (s: string) => chalk.cyan(s),
       (s: string) => chalk.dim(s),
-      "Researching...",
+      "Thinking…",
     );
     addChildBeforeEditor(tui, loader);
     tui.requestRender();
+
+    // Influence sub-step messages — shown while multi-step influence tools run
+    const INFLUENCE_SUBSTEPS: Record<string, string[]> = {
+      trace_influence_path: [
+        "Searching for direct connection…",
+        "Scanning both artists' neighborhoods…",
+        "Extracting co-mentions from reviews…",
+        "Looking for bridge artists…",
+        "Scoring connection strength…",
+      ],
+      find_bridge_artists: [
+        "Searching crossover artists…",
+        "Scanning genre A publications…",
+        "Scanning genre B publications…",
+        "Extracting artist mentions…",
+        "Scoring bridge candidates…",
+      ],
+      search_reviews: [
+        "Querying music publications…",
+        "Extracting full review text…",
+        "Parsing review content…",
+      ],
+      extract_influences: [
+        "Parsing review text…",
+        "Detecting co-mentions…",
+        "Scoring influence signals…",
+      ],
+    };
+    let activeInfluenceTool: string | null = null;
+    let influenceToolInput: Record<string, any> = {};
+
+    // Elapsed-time ticker — updates the loader every second so user sees activity
+    let elapsedTicks = 0;
+    const thinkingPhrases = ["Thinking…", "Reasoning…", "Working on it…"];
+    const elapsedTimer = setInterval(() => {
+      elapsedTicks++;
+      if (!loaderRemoved) {
+        // If an influence tool is active, show sub-step progress
+        if (activeInfluenceTool && INFLUENCE_SUBSTEPS[activeInfluenceTool]) {
+          const steps = INFLUENCE_SUBSTEPS[activeInfluenceTool]!;
+          const stepIdx = Math.min(elapsedTicks - 1, steps.length - 1);
+          const step = steps[stepIdx]!;
+          const stepNum = Math.min(elapsedTicks, steps.length);
+          const header =
+            activeInfluenceTool === "trace_influence_path"
+              ? `🔗 ${influenceToolInput.from_artist ?? "?"} → ${influenceToolInput.to_artist ?? "?"}`
+              : activeInfluenceTool === "find_bridge_artists"
+                ? `🌉 ${influenceToolInput.genre_a ?? "?"} ↔ ${influenceToolInput.genre_b ?? "?"}`
+                : activeInfluenceTool === "search_reviews"
+                  ? `🔍 ${influenceToolInput.artist ?? "artist"}`
+                  : "🧬 Influence analysis";
+          loader.setMessage(
+            `${header}  ${chalk.dim(`step ${stepNum}/${steps.length}:`)} ${step} ${chalk.dim(`(${elapsedTicks}s)`)}`,
+          );
+        } else {
+          const phrase = thinkingPhrases[Math.min(elapsedTicks - 1, thinkingPhrases.length - 1)]!;
+          loader.setMessage(`${phrase} ${chalk.dim(`(${elapsedTicks}s)`)}`);
+        }
+      }
+    }, 1000);
+
+    // Helper: clean up loader and elapsed timer
+    const stopLoader = () => {
+      clearInterval(elapsedTimer);
+      loader.stop();
+    };
 
     // Stream agent response — with progress tiers and interrupt support
     const response = new Markdown("", 1, 1, markdownTheme);
@@ -636,6 +702,16 @@ export function createApp(agent: CrateAgent): TUI {
               const serverName = extractServerName(block.name);
               const elapsed = Date.now() - startTime;
 
+              // Track active influence tool for sub-step ticker
+              if (INFLUENCE_SUBSTEPS[bare]) {
+                activeInfluenceTool = bare;
+                influenceToolInput = (block.input as Record<string, any>) ?? {};
+                elapsedTicks = 0; // Reset ticker so sub-steps start from step 1
+              } else {
+                activeInfluenceTool = null;
+                influenceToolInput = {};
+              }
+
               if (elapsed < 3000) {
                 // Tier 1: simple message
                 const progressMsg = getToolProgressMessage(block.name, block.input ?? {});
@@ -665,6 +741,7 @@ export function createApp(agent: CrateAgent): TUI {
 
             if (block.type === "text" && block.text) {
               if (!loaderRemoved) {
+                stopLoader();
                 tui.removeChild(loader);
                 addChildBeforeEditor(tui, response);
                 loaderRemoved = true;
@@ -678,6 +755,7 @@ export function createApp(agent: CrateAgent): TUI {
       }
     } catch (error) {
       if (!loaderRemoved) {
+        stopLoader();
         tui.removeChild(loader);
         loaderRemoved = true;
       }
@@ -690,6 +768,7 @@ export function createApp(agent: CrateAgent): TUI {
     }
 
     if (!loaderRemoved) {
+      stopLoader();
       tui.removeChild(loader);
     }
 
