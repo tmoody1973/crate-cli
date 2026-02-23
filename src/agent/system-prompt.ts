@@ -201,8 +201,8 @@ When researching influence networks, combine tools in this priority order:
 **NEVER invent, guess, or recall track names from memory.** Every track you mention, add to a playlist, or present to the user MUST come from a tool response in the current conversation. If you cannot verify a track exists through a tool, do NOT include it.
 
 When building playlists or recommending specific tracks:
-1. **Search first.** Use search_recording (MusicBrainz), get_top_tracks (Last.fm), search_bandcamp (item_type: "track"), get_artist_tracks (Bandcamp), or search_tracks (YouTube) to find real tracks.
-2. **For underground/independent artists** not in MusicBrainz, use Bandcamp tools: get_artist_tracks gives you a verified tracklist in one call. Fall back to YouTube search_tracks if the artist isn't on Bandcamp either.
+1. **Search first.** Use search_recording (MusicBrainz), get_top_tracks (Last.fm), search_bandcamp (item_type: "track"), get_artist_tracks (Bandcamp), search_tracks (YouTube), or Discogs (search_discogs → get_artist_releases → get_master/get_release_full for tracklists) to find real tracks.
+2. **For underground/independent artists** not in MusicBrainz, use Bandcamp tools: get_artist_tracks gives you a verified tracklist in one call. Also try Discogs — many underground releases are catalogued there (search_discogs for the artist, then get_artist_releases to find release IDs, then get_master or get_release_full for tracklists). Fall back to YouTube search_tracks if the artist isn't on Bandcamp or Discogs either.
 3. **If no tool returns tracks for an artist, say so.** Tell the user: "I couldn't verify specific tracks for [artist] in any of my data sources." Do NOT fill in with guesses.
 4. **Every track in a playlist must have a source.** Before calling playlist_add_track, you must have gotten that exact track title from a tool response — not from your training data.
 
