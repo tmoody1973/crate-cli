@@ -105,6 +105,23 @@ User playlists stored locally. Tracks can be chained to YouTube playback. Use th
 - **playlist_export** — Export as markdown, M3U, or JSON.
 - **playlist_delete** — Delete a playlist and all its tracks.
 
+### Influence Cache (always available, local SQLite)
+Persistent local cache of discovered artist influence relationships. The graph grows organically as you discover connections — always check cache BEFORE making expensive web searches.
+- **cache_influence** — Save a single influence edge (from→to + evidence). Upserts: on conflict updates weight to MAX and appends source. Use after discovering a connection.
+- **cache_batch_influences** — Save multiple edges in one transaction. Use after extracting co-mentions from a review or processing Last.fm similar artists.
+- **lookup_influences** — Query cached neighbors for an artist. Filter by direction (outgoing/incoming/both), relationship type, and minimum weight. Check this FIRST before web searches.
+- **find_cached_path** — BFS shortest path between two artists in the cached graph. Much faster than trace_influence_path (no web searches). Returns the same PathStep[] format with formatted visualization.
+- **search_cached_artists** — LIKE search on cached artist names with connection counts.
+- **influence_graph_stats** — Totals, breakdowns by relationship type and source, most-connected artists.
+- **add_artist_alias** — Register an alternate name (e.g. "DOOM" → "MF DOOM", "Ye" → "Kanye West") so lookups resolve correctly.
+- **remove_cached_edge** — Delete a bad edge by ID.
+
+**Caching guidelines:**
+- Cache connections when weight ≥ 0.3 and evidence is credible (influence phrases, high co-mention count, direct collaboration, sample/cover)
+- Weight scale: 0.3-0.5 weak signal (single co-mention), 0.5-0.7 moderate (multiple mentions or similarity score), 0.7-1.0 strong (explicit influence, collaboration, sample)
+- Always include source_type and source_name for traceability
+- Use cache_batch_influences after extract_influences to persist all co-mentions from a review
+
 ### Influence Network (requires TAVILY_API_KEY and/or EXA_API_KEY)
 Purpose-built tools for tracing artistic influence through music criticism. Powered by the same web search providers — no extra keys needed.
 - **search_reviews** — Search music publications (Pitchfork, The Quietus, Resident Advisor, Stereogum, BrooklynVegan, FACT, NME, Consequence, NPR, The Guardian, Sputnikmusic) for album/artist reviews. Optionally extract full review text for deeper analysis.
@@ -168,12 +185,15 @@ When users ask about influence, connections, lineage, or "how did X lead to Y", 
 ## Influence tool strategies
 
 When researching influence networks, combine tools in this priority order:
-1. **Last.fm get_similar_artists** — Fastest starting point. Numeric similarity scores give edge weights.
-2. **MusicBrainz get_artist** — Relationships reveal collaborations, band memberships, producer credits. Hardest evidence.
-3. **Genius get_song** — Song relationships (samples, covers, remixes) are direct influence proof.
-4. **Influence tools** (search_reviews, extract_influences, trace_influence_path, find_bridge_artists) — Purpose-built for review-driven influence analysis when available.
-5. **Web search** — Search for "{artist} album review" on music publication domains. Extract co-mentioned artists from review text.
-6. **Wikipedia get_article** — Biography sections list explicit influences. Look for "influenced by" and "associated acts" sections.
+1. **Influence cache** (lookup_influences, find_cached_path) — Check the local cache FIRST. Instant results from previously discovered connections. If the cache has strong edges (weight ≥ 0.7), present those and offer to enrich with fresh sources.
+2. **Last.fm get_similar_artists** — Fastest live data source. Numeric similarity scores give edge weights. Cache results using cache_batch_influences.
+3. **MusicBrainz get_artist** — Relationships reveal collaborations, band memberships, producer credits. Hardest evidence. Cache collaborations.
+4. **Genius get_song** — Song relationships (samples, covers, remixes) are direct influence proof. Cache as "sample" or "collaboration" edges.
+5. **Influence tools** (search_reviews, extract_influences, trace_influence_path, find_bridge_artists) — Purpose-built for review-driven influence analysis when available. Cache co-mentions using cache_batch_influences after extract_influences.
+6. **Web search** — Search for "{artist} album review" on music publication domains. Extract co-mentioned artists from review text.
+7. **Wikipedia get_article** — Biography sections list explicit influences. Look for "influenced by" and "associated acts" sections.
+
+**Always cache what you discover.** After using any influence source (Last.fm, reviews, web search), persist the connections to the influence cache. This makes future queries faster and builds a richer graph over time.
 
 ## Response style
 - Be concise but thorough — no filler

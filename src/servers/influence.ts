@@ -3,9 +3,11 @@
  * Influence Network MCP server — review-driven artist discovery
  * using co-mention analysis from music publication reviews.
  *
- * Based on the Stell-R methodology (Harvard Data Science Review, 2025):
- * artist co-mentions in music reviews are a powerful proxy for artistic
- * influence and connection.
+ * Based on the Stell-R methodology from "Modeling Artist Influence for
+ * Music Selection and Recommendation" (Badillo-Goicoechea, Harvard Data
+ * Science Review, Fall 2025 — https://hdsr.mitpress.mit.edu/pub/t4txmd81):
+ * artist co-mentions across 61,000+ album reviews are a powerful proxy
+ * for artistic influence and connection.
  *
  * Requires TAVILY_API_KEY and/or EXA_API_KEY (reuses web-search credentials).
  */

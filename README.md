@@ -86,6 +86,53 @@ playlist from Fela to today.
 
 Each prompt triggers cross-referencing across multiple databases — no single source has the full picture. See **[docs/USE_CASES.md](docs/USE_CASES.md)** for 20 detailed case studies with multi-turn prompt sequences, slash command usage, and advanced workflows.
 
+## Influence Network
+
+Crate includes a research-backed influence mapping system based on the [Stell-R methodology](https://hdsr.mitpress.mit.edu/pub/t4txmd81/release/2) (Badillo-Goicoechea, *Harvard Data Science Review*, Fall 2025). The paper demonstrated that artist co-mentions in music reviews — when Pitchfork reviews Radiohead and mentions Aphex Twin in the same paragraph — are a powerful proxy for artistic influence, outperforming collaborative filtering for exploration-oriented discovery.
+
+Crate implements this in three layers:
+
+**Review-Driven Discovery** — Search 12 music publications, extract full review text, and identify co-mentioned artists using influence phrase detection ("influenced by", "reminiscent of", "in the vein of").
+
+```
+> Search for reviews of Burial's Untrue and extract all influence signals
+
+🔍 Searching music publications for "Burial" — Untrue…
+🧬 Extracting co-mentions & influence signals from review text…
+
+Found 8 co-mentions with influence context:
+  Massive Attack (3 mentions, influence phrase: "owes a debt to")
+  Aphex Twin (2 mentions, influence phrase: "reminiscent of")
+  ...
+```
+
+**Influence Tracing** — Build multi-hop paths between artists using web search and co-mention extraction. Find bridge artists that connect disconnected genres.
+
+```
+> Trace the influence path from Kraftwerk to Radiohead
+
+🔗 Tracing influence path: Kraftwerk → Radiohead
+
+  Kraftwerk
+    │ influenced (Wikipedia: "pioneered electronic pop")
+    ▼
+  Depeche Mode
+    │ co-mentioned (Pitchfork review of OK Computer)
+    ▼
+  Radiohead
+```
+
+**Influence Cache** — Every discovered connection is persisted to a local SQLite graph (`~/.crate/influence.db`). Future queries check the cache first for instant results. The graph grows with every question you ask.
+
+```
+> Show me the influence graph stats
+
+📊 247 artists · 512 edges · 1,038 source citations
+   Top: Brian Eno (34 connections), David Bowie (28), Aphex Twin (23)
+```
+
+See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep-dive.
+
 ## Data Sources
 
 | Source | Tools | API Key Required |
@@ -96,14 +143,16 @@ Each prompt triggers cross-referencing across multiple databases — no single s
 | **YouTube** | 4 (search, play track, play playlist, player control) | No* |
 | **Radio Browser** | 4 (search, browse, tags, play station) | No |
 | **News / RSS** | 3 (search news, latest reviews, list sources) | No |
+| **Influence Cache** | 8 (cache edges, lookup, BFS path, search, stats, aliases) | No |
 | **Discogs** | 9 (search, artist, release, label, master, marketplace) | Yes |
 | **Last.fm** | 8 (artist/album/track stats, similar artists, tags, geo) | Yes |
 | **Genius** | 6 (song search, annotations, artist info) | Yes |
 | **Web Search** | 3 (search, find similar, extract content) | Yes* |
+| **Influence Network** | 4 (search reviews, extract influences, trace path, bridge artists) | Yes* |
 
-MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, and News are always available — no API keys needed. The others activate automatically when you provide their API keys.
+MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, and Influence Cache are always available — no API keys needed. The others activate automatically when you provide their API keys.
 
-*Web Search uses dual providers — Tavily (keyword) and Exa.ai (neural/semantic). Either key enables the server; both keys unlock the full toolkit.
+*Web Search and Influence Network use dual providers — Tavily (keyword) and Exa.ai (neural/semantic). Either key enables both servers; both keys unlock the full toolkit.
 
 *YouTube search works without a key via yt-dlp scraping. Set `YOUTUBE_API_KEY` for faster, richer search results.
 
@@ -111,7 +160,7 @@ Wikipedia supports optional [Wikimedia Enterprise](https://enterprise.wikimedia.
 
 ## Tools Reference
 
-Crate's agent has access to **70 tools** across 13 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
+Crate's agent has access to **82 tools** across 15 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
 
 ### MusicBrainz (always available)
 
@@ -251,6 +300,34 @@ Sources: Pitchfork, Stereogum, Resident Advisor, The Quietus, BrooklynVegan, Ban
 
 Dual-provider architecture: Tavily handles keyword search with domain filtering and time ranges; Exa.ai handles neural/semantic search and find-similar. Either key enables the server.
 
+### Influence Network (requires `TAVILY_API_KEY` and/or `EXA_API_KEY`)
+
+Purpose-built tools for tracing artistic influence through music criticism, based on the [Stell-R methodology](https://hdsr.mitpress.mit.edu/pub/t4txmd81/release/2) (Badillo-Goicoechea, *Harvard Data Science Review*, Fall 2025) — which demonstrated that artist co-mentions in 61,000+ album reviews are a powerful proxy for artistic influence and connection.
+
+| Tool | What it does |
+|------|-------------|
+| `search_reviews` | Search 12 music publications (Pitchfork, The Quietus, Resident Advisor, Stereogum, etc.) for album/artist reviews |
+| `extract_influences` | Extract artist co-mentions from review text using heuristic name extraction and influence phrase detection |
+| `trace_influence_path` | Find a chain of influence between two artists (depth 1–5) with evidence for each link |
+| `find_bridge_artists` | Find artists that connect two genres or scenes, scored by cross-genre co-mention density |
+
+### Influence Cache (always available)
+
+Persistent local SQLite cache that stores every discovered influence relationship. The graph grows organically over time — the agent checks cache before making expensive web searches.
+
+| Tool | What it does |
+|------|-------------|
+| `cache_influence` | Save a single influence edge with evidence. Upserts: repeated discoveries strengthen weight, never weaken it |
+| `cache_batch_influences` | Save multiple edges in one transaction (after extracting co-mentions from a review) |
+| `lookup_influences` | Query cached neighbors by artist, direction, relationship type, minimum weight |
+| `find_cached_path` | BFS shortest path between two cached artists — instant, no web searches |
+| `search_cached_artists` | Search cached artist names with connection counts |
+| `influence_graph_stats` | Graph totals, breakdowns by relationship/source type, most-connected artists |
+| `add_artist_alias` | Register alternate names (e.g. "DOOM" → "MF DOOM", "Ye" → "Kanye West") |
+| `remove_cached_edge` | Delete incorrect edges by ID |
+
+See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep-dive: research foundation, algorithms, architecture, and how these features compare to streaming service recommendations.
+
 ## Quick Start
 
 ### Prerequisites
@@ -374,18 +451,24 @@ crate-cli/
 │   │   ├── radio.ts           # Radio Browser MCP server (4 tools)
 │   │   ├── news.ts            # News / RSS MCP server (3 tools, 10 feeds)
 │   │   ├── web-search.ts      # Web search MCP server (3 tools, Tavily + Exa)
+│   │   ├── influence.ts       # Influence network MCP server (4 tools, review co-mentions)
+│   │   ├── influence-cache.ts # Influence cache MCP server (8 tools, local SQLite)
 │   │   ├── collection.ts      # Local collection manager (SQLite)
 │   │   ├── playlist.ts        # Playlist manager (SQLite)
 │   │   └── memory.ts          # Mem0 persistent memory
 │   ├── ui/
-│   │   ├── app.ts             # TUI setup, slash commands
+│   │   ├── app.ts             # TUI setup, slash commands, progress display
 │   │   ├── components.ts      # Themes, banner, hyperlinks
 │   │   ├── keys-panel.ts      # Interactive API key management (/keys)
-│   │   └── now-playing.ts     # Now-playing bar overlay
+│   │   ├── now-playing.ts     # Now-playing bar overlay
+│   │   └── onboarding.ts      # First-run onboarding flow
 │   └── utils/
 │       ├── config.ts          # Model resolution, env config
+│       ├── db.ts              # SQLite database utility (~/.crate/*.db)
 │       ├── env.ts             # .env file read/write utilities
-│       └── player.ts          # Shared mpv player infrastructure
+│       ├── hints.ts           # Contextual hint engine
+│       ├── player.ts          # Shared mpv player infrastructure
+│       └── viz.ts             # Terminal visualizations (influence paths, charts)
 ├── tests/
 ├── docs/                      # Design docs and plans
 ├── package.json

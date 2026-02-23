@@ -202,6 +202,23 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `🔗 Tracing influence path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}  ⟨multi-step⟩`;
     case "find_bridge_artists":
       return `🌉 Finding bridge artists: ${input?.genre_a ?? "?"} ↔ ${input?.genre_b ?? "?"}  ⟨multi-step⟩`;
+    // Influence cache tools
+    case "cache_influence":
+      return `💾 Caching: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}…`;
+    case "cache_batch_influences":
+      return `💾 Caching ${input?.edges?.length ?? 0} influence edges…`;
+    case "lookup_influences":
+      return `🔎 Looking up cached influences for "${input?.artist ?? "?"}"…`;
+    case "find_cached_path":
+      return `🗺️ Finding cached path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}…`;
+    case "search_cached_artists":
+      return `🔎 Searching cached artists for "${input?.query ?? "?"}"…`;
+    case "influence_graph_stats":
+      return "📊 Getting influence graph stats…";
+    case "add_artist_alias":
+      return `🏷️ Adding alias: "${input?.alias ?? "?"}" → "${input?.artist_name ?? "?"}"…`;
+    case "remove_cached_edge":
+      return `🗑️ Removing cached edge #${input?.edge_id ?? "?"}…`;
     // News / RSS tools
     case "search_music_news":
       return `Searching music news for "${input?.query ?? "..."}"...`;
@@ -238,6 +255,7 @@ const SERVER_LABELS: Record<string, string> = {
   playlist: "Playlist",
   websearch: "Web",
   influence: "Influence",
+  influencecache: "Cache",
   memory: "Memory",
 };
 
