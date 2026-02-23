@@ -4,6 +4,7 @@ import { z } from "zod";
 const BASE_URL = "https://api.discogs.com";
 const USER_AGENT = "CrateCLI/1.0 +https://github.com/user/crate-cli";
 const RATE_LIMIT_MS = 1000;
+const FETCH_TIMEOUT_MS = 15_000;
 
 let lastRequest = 0;
 
@@ -35,13 +36,21 @@ export async function discogsFetch(
     }
   }
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      "User-Agent": USER_AGENT,
-      Authorization: `Discogs key=${key}, secret=${secret}`,
-      Accept: "application/json",
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Authorization: `Discogs key=${key}, secret=${secret}`,
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     throw new Error(`Discogs API error: ${res.status}`);
@@ -286,12 +295,12 @@ const searchDiscogs = tool(
   "search_discogs",
   "Search the Discogs database for artists, releases, masters, or labels. Returns matching results with IDs, types, and thumbnails.",
   {
-    query: z.string().describe("Search query"),
+    query: z.string().max(200).describe("Search query"),
     type: z.enum(["artist", "release", "master", "label"]).optional().describe("Filter by type"),
-    genre: z.string().optional().describe("Filter by genre"),
-    style: z.string().optional().describe("Filter by style"),
-    country: z.string().optional().describe("Filter by country"),
-    year: z.string().optional().describe("Filter by year"),
+    genre: z.string().max(100).optional().describe("Filter by genre"),
+    style: z.string().max(100).optional().describe("Filter by style"),
+    country: z.string().max(100).optional().describe("Filter by country"),
+    year: z.string().max(10).optional().describe("Filter by year"),
     per_page: z.number().optional().describe("Results per page (default 10)"),
   },
   searchDiscogsHandler,

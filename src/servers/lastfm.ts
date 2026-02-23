@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const BASE_URL = "https://ws.audioscrobbler.com/2.0/";
 const RATE_LIMIT_MS = 200; // 5 req/sec
+const FETCH_TIMEOUT_MS = 15_000;
 
 let lastRequest = 0;
 
@@ -37,11 +38,19 @@ export async function lastfmFetch(
     }
   }
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      "User-Agent": "Crate-CLI/1.0 (music-research-agent)",
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      headers: {
+        "User-Agent": "Crate-CLI/1.0 (music-research-agent)",
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     throw new Error(`Last.fm API error: ${res.status}`);
@@ -312,8 +321,8 @@ const getArtistInfo = tool(
   "get_artist_info",
   "Get Last.fm artist stats: global listener and play counts, community tags, similar artists, and bio. Optionally include a username to see that user's personal play count for the artist.",
   {
-    artist: z.string().describe("Artist name"),
-    username: z.string().optional().describe("Last.fm username (adds personal play count)"),
+    artist: z.string().max(200).describe("Artist name"),
+    username: z.string().max(100).optional().describe("Last.fm username (adds personal play count)"),
   },
   getArtistInfoHandler,
 );
@@ -322,9 +331,9 @@ const getAlbumInfo = tool(
   "get_album_info",
   "Get Last.fm album stats: global listener and play counts, tracklist with durations, community tags, and wiki. Optionally include a username to see personal play count.",
   {
-    artist: z.string().describe("Artist name"),
-    album: z.string().describe("Album name"),
-    username: z.string().optional().describe("Last.fm username (adds personal play count)"),
+    artist: z.string().max(200).describe("Artist name"),
+    album: z.string().max(200).describe("Album name"),
+    username: z.string().max(100).optional().describe("Last.fm username (adds personal play count)"),
   },
   getAlbumInfoHandler,
 );
@@ -333,9 +342,9 @@ const getTrackInfo = tool(
   "get_track_info",
   "Get Last.fm track stats: global listener and play counts, duration, community tags, album info, and wiki. Optionally include a username to see personal play count and loved status.",
   {
-    artist: z.string().describe("Artist name"),
-    track: z.string().describe("Track name"),
-    username: z.string().optional().describe("Last.fm username (adds personal stats)"),
+    artist: z.string().max(200).describe("Artist name"),
+    track: z.string().max(200).describe("Track name"),
+    username: z.string().max(100).optional().describe("Last.fm username (adds personal stats)"),
   },
   getTrackInfoHandler,
 );
@@ -344,7 +353,7 @@ const getSimilarArtists = tool(
   "get_similar_artists",
   "Get artists similar to a given artist from Last.fm, with numeric match scores (0-1) based on listener behavior. Great for discovering related artists and mapping sonic connections.",
   {
-    artist: z.string().describe("Artist name"),
+    artist: z.string().max(200).describe("Artist name"),
     limit: z.number().optional().describe("Number of results (default 20)"),
   },
   getSimilarArtistsHandler,
@@ -354,8 +363,8 @@ const getSimilarTracks = tool(
   "get_similar_tracks",
   "Get tracks similar to a given track from Last.fm, with numeric match scores based on listener behavior. Useful for finding songs with a similar vibe or building playlists.",
   {
-    artist: z.string().describe("Artist name"),
-    track: z.string().describe("Track name"),
+    artist: z.string().max(200).describe("Artist name"),
+    track: z.string().max(200).describe("Track name"),
     limit: z.number().optional().describe("Number of results (default 20)"),
   },
   getSimilarTracksHandler,
@@ -365,7 +374,7 @@ const getTopTracks = tool(
   "get_top_tracks",
   "Get an artist's most popular tracks on Last.fm ranked by play count. Shows which songs resonate most with listeners based on actual scrobble data.",
   {
-    artist: z.string().describe("Artist name"),
+    artist: z.string().max(200).describe("Artist name"),
     limit: z.number().optional().describe("Number of results (default 20)"),
     page: z.number().optional().describe("Page number"),
   },
@@ -376,7 +385,7 @@ const getTagArtists = tool(
   "get_tag_artists",
   "Get the top artists for a genre, mood, or scene tag on Last.fm. Uses community-driven folksonomy — supports micro-genres, moods, eras, and scenes (e.g., 'shoegaze', 'dark ambient', 'protest music').",
   {
-    tag: z.string().describe("Tag/genre name"),
+    tag: z.string().max(100).describe("Tag/genre name"),
     limit: z.number().optional().describe("Number of results (default 20)"),
     page: z.number().optional().describe("Page number"),
   },
@@ -387,7 +396,7 @@ const getGeoTopTracks = tool(
   "get_geo_top_tracks",
   "Get the most popular tracks in a specific country on Last.fm. Shows what's trending in a region based on scrobble data.",
   {
-    country: z.string().describe("Country name (e.g., 'Germany', 'Japan', 'Brazil')"),
+    country: z.string().max(100).describe("Country name (e.g., 'Germany', 'Japan', 'Brazil')"),
     limit: z.number().optional().describe("Number of results (default 20)"),
     page: z.number().optional().describe("Page number"),
   },

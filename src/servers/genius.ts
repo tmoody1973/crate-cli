@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const BASE_URL = "https://api.genius.com";
 const RATE_LIMIT_MS = 200;
+const FETCH_TIMEOUT_MS = 15_000;
 
 let lastRequest = 0;
 
@@ -35,12 +36,20 @@ export async function geniusFetch(
     }
   }
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     throw new Error(`Genius API error: ${res.status}`);
@@ -226,7 +235,7 @@ const searchSongs = tool(
   "search_songs",
   "Search Genius for songs by title, artist, or lyrics snippet. Returns song matches with IDs, titles, artists, and URLs.",
   {
-    query: z.string().describe("Search query (song title, artist name, or lyrics)"),
+    query: z.string().max(200).describe("Search query (song title, artist name, or lyrics)"),
     per_page: z.number().optional().describe("Results per page (default 10)"),
   },
   searchSongsHandler,

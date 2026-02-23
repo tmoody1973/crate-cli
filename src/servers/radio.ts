@@ -33,6 +33,7 @@ const API_MIRRORS = [
 ];
 
 const USER_AGENT = "Crate/0.5.0";
+const FETCH_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // API Helpers
@@ -43,12 +44,20 @@ async function radioFetch(path: string): Promise<any> {
 
   for (const base of API_MIRRORS) {
     try {
-      const resp = await fetch(`${base}${path}`, {
-        headers: {
-          "User-Agent": USER_AGENT,
-          "Accept": "application/json",
-        },
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      let resp: Response;
+      try {
+        resp = await fetch(`${base}${path}`, {
+          headers: {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+          },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
       if (!resp.ok) {
         lastError = new Error(`Radio Browser API error: ${resp.status}`);
         continue;
@@ -228,6 +237,10 @@ async function playRadioHandler(args: {
     let stationName: string;
 
     if (args.url) {
+      const parsed = new URL(args.url);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error("Stream URL must use HTTP or HTTPS.");
+      }
       streamUrl = args.url;
       stationName = args.name ?? "Radio";
     } else {
@@ -247,6 +260,10 @@ async function playRadioHandler(args: {
 
       const station = stations[0]!;
       streamUrl = station.url_resolved || station.url;
+      const parsed = new URL(streamUrl);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error("Station stream URL must use HTTP or HTTPS.");
+      }
       stationName = station.name?.trim() || args.name!;
     }
 
@@ -283,10 +300,10 @@ const searchRadio = tool(
   "Search internet radio stations by name, genre tag, country, or language. " +
     "Returns station name, stream URL, tags, country, codec, bitrate, and votes.",
   {
-    query: z.string().describe("Search terms (e.g. 'jazz', 'KEXP', 'BBC Radio')"),
-    tag: z.string().optional().describe("Filter by genre tag (e.g. 'jazz', 'electronic', 'hip hop')"),
-    country: z.string().optional().describe("Filter by country name (e.g. 'United States', 'Germany', 'Japan')"),
-    language: z.string().optional().describe("Filter by language (e.g. 'english', 'spanish', 'french')"),
+    query: z.string().max(200).describe("Search terms (e.g. 'jazz', 'KEXP', 'BBC Radio')"),
+    tag: z.string().max(100).optional().describe("Filter by genre tag (e.g. 'jazz', 'electronic', 'hip hop')"),
+    country: z.string().max(100).optional().describe("Filter by country name (e.g. 'United States', 'Germany', 'Japan')"),
+    language: z.string().max(100).optional().describe("Filter by language (e.g. 'english', 'spanish', 'french')"),
     limit: z.number().min(1).max(50).optional().describe("Number of results (default: 10, max: 50)"),
   },
   searchRadioHandler,
@@ -297,8 +314,8 @@ const browseRadio = tool(
   "Browse top radio stations by genre tag or country, sorted by popularity. " +
     "Without filters, returns the globally most popular stations.",
   {
-    tag: z.string().optional().describe("Browse stations with this genre tag"),
-    country: z.string().optional().describe("Browse stations from this country"),
+    tag: z.string().max(100).optional().describe("Browse stations with this genre tag"),
+    country: z.string().max(100).optional().describe("Browse stations from this country"),
     order: z.enum(["votes", "clickcount", "name"]).optional().describe("Sort order (default: votes)"),
     limit: z.number().min(1).max(50).optional().describe("Number of results (default: 10, max: 50)"),
   },
@@ -321,8 +338,8 @@ const playRadio = tool(
     "Provide a stream URL directly, or a station name to search and play the best match. " +
     "Player controls (pause, volume, stop) work via player_control.",
   {
-    url: z.string().optional().describe("Direct stream URL to play"),
-    name: z.string().optional().describe("Station name to search and play (e.g. 'KEXP', 'NTS Radio')"),
+    url: z.string().max(500).optional().describe("Direct stream URL to play"),
+    name: z.string().max(200).optional().describe("Station name to search and play (e.g. 'KEXP', 'NTS Radio')"),
   },
   playRadioHandler,
 );

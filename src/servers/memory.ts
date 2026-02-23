@@ -136,7 +136,7 @@ const categoryEnum = z
 const getUserContext = tool(
   "get_user_context",
   "Search the user's memory for relevant context. Returns ranked facts about the user's preferences, collecting habits, and research interests.",
-  { query: z.string().describe("Search query to find relevant memories") },
+  { query: z.string().max(500).describe("Search query to find relevant memories") },
   getUserContextHandler,
 );
 
@@ -161,7 +161,7 @@ const rememberAboutUser = tool(
   "remember_about_user",
   "Explicitly store a single fact about the user. Use when the user says something memorable about their taste, collection, or research.",
   {
-    fact: z.string().describe("The fact to remember (e.g. 'User collects Japanese jazz vinyl')"),
+    fact: z.string().max(1000).describe("The fact to remember (e.g. 'User collects Japanese jazz vinyl')"),
     category: categoryEnum,
   },
   rememberAboutUserHandler,

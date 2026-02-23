@@ -146,21 +146,16 @@ export function spawnMpv(target: string, extraArgs: string[] = []): ChildProcess
     detached: false,
   });
 
-  proc.on("error", () => {
+  const cleanup = () => {
     player.process = null;
     player.currentTrack = null;
     player.isRadio = false;
     player.stationName = undefined;
     onPlayerStopped?.();
-  });
+  };
 
-  proc.on("exit", () => {
-    player.process = null;
-    player.currentTrack = null;
-    player.isRadio = false;
-    player.stationName = undefined;
-    onPlayerStopped?.();
-  });
+  proc.once("error", cleanup);
+  proc.once("exit", cleanup);
 
   player.process = proc;
   return proc;

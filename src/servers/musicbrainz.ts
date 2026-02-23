@@ -4,6 +4,7 @@ import { z } from "zod";
 const BASE_URL = "https://musicbrainz.org/ws/2";
 const USER_AGENT = "Crate/0.1.0 (https://github.com/user/crate-cli)";
 const RATE_LIMIT_MS = 1100;
+const FETCH_TIMEOUT_MS = 15_000;
 
 let lastRequest = 0;
 
@@ -18,13 +19,20 @@ export async function rateLimit(): Promise<void> {
 
 async function mbFetch(path: string): Promise<any> {
   await rateLimit();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-  });
-  if (!res.ok) {
-    throw new Error(`MusicBrainz API error: ${res.status}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`MusicBrainz API error: ${res.status}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json();
 }
 
 function toolResult(data: unknown): { content: [{ type: "text"; text: string }] } {
@@ -113,14 +121,14 @@ export async function getRecordingCreditsHandler(args: { mbid: string }) {
 const searchArtist = tool(
   "search_artist",
   "Search MusicBrainz for artists by name. Returns a ranked list of matching artists with IDs, disambiguation, type, and country.",
-  { query: z.string().describe("Artist name to search for") },
+  { query: z.string().max(200).describe("Artist name to search for") },
   searchArtistHandler,
 );
 
 const getArtist = tool(
   "get_artist",
   "Get full artist details from MusicBrainz by MBID. Includes relationships (collaborations, member-of, URLs) and release groups (albums, singles, EPs).",
-  { mbid: z.string().describe("MusicBrainz artist ID (UUID format)") },
+  { mbid: z.string().max(50).describe("MusicBrainz artist ID (UUID format)") },
   getArtistHandler,
 );
 
@@ -128,8 +136,8 @@ const searchRelease = tool(
   "search_release",
   "Search MusicBrainz for releases (albums, singles, EPs). Optionally filter by artist name.",
   {
-    query: z.string().describe("Release title to search for"),
-    artist: z.string().optional().describe("Filter by artist name"),
+    query: z.string().max(200).describe("Release title to search for"),
+    artist: z.string().max(200).optional().describe("Filter by artist name"),
   },
   searchReleaseHandler,
 );
@@ -137,7 +145,7 @@ const searchRelease = tool(
 const getRelease = tool(
   "get_release",
   "Get full release details from MusicBrainz by MBID. Includes tracklist with recordings, artist credits, and label information.",
-  { mbid: z.string().describe("MusicBrainz release ID (UUID format)") },
+  { mbid: z.string().max(50).describe("MusicBrainz release ID (UUID format)") },
   getReleaseHandler,
 );
 
@@ -145,8 +153,8 @@ const searchRecording = tool(
   "search_recording",
   "Search MusicBrainz for recordings (individual tracks). Optionally filter by artist name.",
   {
-    query: z.string().describe("Recording/track title to search for"),
-    artist: z.string().optional().describe("Filter by artist name"),
+    query: z.string().max(200).describe("Recording/track title to search for"),
+    artist: z.string().max(200).optional().describe("Filter by artist name"),
   },
   searchRecordingHandler,
 );
@@ -155,7 +163,7 @@ const getRecordingCredits = tool(
   "get_recording_credits",
   "Get detailed credits for a recording from MusicBrainz by MBID. Includes artist credits, artist relationships (producer, engineer, etc.), and work relationships.",
   {
-    mbid: z.string().describe("MusicBrainz recording ID (UUID format)"),
+    mbid: z.string().max(50).describe("MusicBrainz recording ID (UUID format)"),
   },
   getRecordingCreditsHandler,
 );

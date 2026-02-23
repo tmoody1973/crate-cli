@@ -26,6 +26,7 @@ const ENTERPRISE_AUTH_URL = "https://auth.enterprise.wikimedia.com/v1/login";
 const ENTERPRISE_API_URL = "https://api.enterprise.wikimedia.com/v2/structured-contents";
 
 const USER_AGENT = "Crate/1.0 (music research CLI; https://github.com/crate-music)";
+const FETCH_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,14 +111,22 @@ export async function getEnterpriseToken(): Promise<string | null> {
     return cachedToken.token;
   }
 
-  const resp = await fetch(ENTERPRISE_AUTH_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username: process.env.WIKIMEDIA_USERNAME,
-      password: process.env.WIKIMEDIA_PASSWORD,
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let resp: Response;
+  try {
+    resp = await fetch(ENTERPRISE_AUTH_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: process.env.WIKIMEDIA_USERNAME,
+        password: process.env.WIKIMEDIA_PASSWORD,
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!resp.ok) {
     cachedToken = null;
@@ -149,9 +158,17 @@ export async function searchArticlesHandler(args: {
   try {
     const limit = args.limit ?? 5;
     const url = `${SEARCH_URL}?q=${encodeURIComponent(args.query)}&limit=${limit}`;
-    const resp = await fetch(url, {
-      headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!resp.ok) {
       throw new Error(`Wikipedia search API error: ${resp.status} ${resp.statusText}`);
@@ -178,9 +195,17 @@ export async function searchArticlesHandler(args: {
 export async function getSummaryHandler(args: { title: string }) {
   try {
     const url = `${SUMMARY_URL}/${encodeURIComponent(args.title)}`;
-    const resp = await fetch(url, {
-      headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (!resp.ok) {
       if (resp.status === 404) throw new Error(`Wikipedia article not found: "${args.title}"`);
@@ -213,13 +238,21 @@ async function fetchEnterpriseArticle(
 
   try {
     const url = `${ENTERPRISE_API_URL}/en.wikipedia/${encodeURIComponent(title)}`;
-    const resp = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Api-User-Agent": USER_AGENT,
-        Accept: "application/json",
-      },
-    });
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Api-User-Agent": USER_AGENT,
+          Accept: "application/json",
+        },
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(t);
+    }
 
     if (!resp.ok) return null;
 
@@ -247,9 +280,17 @@ async function fetchFreeArticle(title: string): Promise<{
   lastEdited?: string | null;
 }> {
   const url = `${PAGE_URL}/${encodeURIComponent(title)}`;
-  const resp = await fetch(url, {
-    headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      headers: { "Api-User-Agent": USER_AGENT, Accept: "application/json" },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!resp.ok) {
     if (resp.status === 404) throw new Error(`Wikipedia article not found: "${title}"`);
@@ -311,7 +352,7 @@ const searchArticles = tool(
     "Use for finding artist bios, genre histories, label backgrounds, venue info, " +
     "cultural movements, and any contextual information that structured music databases lack.",
   {
-    query: z.string().describe("Search terms (e.g. 'Madlib hip hop producer', 'Detroit techno history')"),
+    query: z.string().max(200).describe("Search terms (e.g. 'Madlib hip hop producer', 'Detroit techno history')"),
     limit: z.number().min(1).max(20).optional().describe("Max results to return (default 5)"),
   },
   searchArticlesHandler,
@@ -323,7 +364,7 @@ const getSummary = tool(
     "Use for quick biographical context, genre overviews, or label backgrounds " +
     "without fetching the full article. Fast and token-efficient.",
   {
-    title: z.string().describe(
+    title: z.string().max(300).describe(
       "Wikipedia article title (e.g. 'Madlib', 'Detroit_techno', 'Blue_Note_Records'). " +
         "Use underscores for spaces, or use the exact title from search_articles results.",
     ),
@@ -339,7 +380,7 @@ const getArticle = tool(
     "Returns cleaned text with section headers preserved. Can be long. " +
     "Uses Wikimedia Enterprise API when credentials are configured for richer content.",
   {
-    title: z.string().describe(
+    title: z.string().max(300).describe(
       "Wikipedia article title (e.g. 'J_Dilla', 'Warp_Records', 'UK_garage'). " +
         "Use underscores for spaces, or the exact key from search_articles results.",
     ),

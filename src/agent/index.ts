@@ -55,8 +55,8 @@ export class CrateAgent {
         const facts = data.memories.map((m: any) => `- ${m.memory}`).join("\n");
         this.memoryContext = `## User Context (from previous sessions)\n${facts}`;
       }
-    } catch {
-      // Silently continue if memory is unavailable
+    } catch (err) {
+      if (process.env.DEBUG) console.warn("[Memory] Failed to load context:", err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -66,8 +66,8 @@ export class CrateAgent {
     try {
       const recent = this.conversationHistory.slice(-20);
       await updateUserMemoryHandler({ messages: recent });
-    } catch {
-      // Silently continue
+    } catch (err) {
+      if (process.env.DEBUG) console.warn("[Memory] Failed to save session:", err instanceof Error ? err.message : String(err));
     }
   }
 

@@ -271,8 +271,8 @@ const playlistCreate = tool(
   "playlist_create",
   "Create a new playlist. Returns the playlist ID.",
   {
-    name: z.string().describe("Playlist name"),
-    description: z.string().optional().describe("Playlist description"),
+    name: z.string().max(200).describe("Playlist name"),
+    description: z.string().max(1000).optional().describe("Playlist description"),
   },
   playlistCreateHandler,
 );
@@ -282,11 +282,11 @@ const playlistAddTrack = tool(
   "Add a track to a playlist. Auto-positions at end, or insert at a specific position (shifts others).",
   {
     playlist_id: z.number().describe("Playlist ID"),
-    artist: z.string().describe("Artist name"),
-    title: z.string().describe("Track title"),
-    album: z.string().optional().describe("Album name"),
-    notes: z.string().optional().describe("Notes about this track"),
-    youtube_url: z.string().optional().describe("YouTube URL for playback"),
+    artist: z.string().max(200).describe("Artist name"),
+    title: z.string().max(200).describe("Track title"),
+    album: z.string().max(200).optional().describe("Album name"),
+    notes: z.string().max(1000).optional().describe("Notes about this track"),
+    youtube_url: z.string().max(500).optional().describe("YouTube URL for playback"),
     position: z.number().optional().describe("Insert at position (shifts existing tracks)"),
   },
   playlistAddTrackHandler,

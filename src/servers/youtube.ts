@@ -45,6 +45,7 @@ export {
 // ---------------------------------------------------------------------------
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
+const FETCH_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,7 +95,14 @@ export async function searchTracksHandler(args: {
         key: apiKey,
       });
 
-      const searchResp = await fetch(`${YOUTUBE_API_BASE}/search?${searchParams}`);
+      const searchController = new AbortController();
+      const searchTimer = setTimeout(() => searchController.abort(), FETCH_TIMEOUT_MS);
+      let searchResp: Response;
+      try {
+        searchResp = await fetch(`${YOUTUBE_API_BASE}/search?${searchParams}`, { signal: searchController.signal });
+      } finally {
+        clearTimeout(searchTimer);
+      }
       if (!searchResp.ok) {
         throw new Error(`YouTube API error: ${searchResp.status}`);
       }
@@ -113,7 +121,14 @@ export async function searchTracksHandler(args: {
         id: videoIds.join(","),
         key: apiKey,
       });
-      const videoResp = await fetch(`${YOUTUBE_API_BASE}/videos?${videoParams}`);
+      const videoController = new AbortController();
+      const videoTimer = setTimeout(() => videoController.abort(), FETCH_TIMEOUT_MS);
+      let videoResp: Response;
+      try {
+        videoResp = await fetch(`${YOUTUBE_API_BASE}/videos?${videoParams}`, { signal: videoController.signal });
+      } finally {
+        clearTimeout(videoTimer);
+      }
       const videoData = videoResp.ok ? await videoResp.json() as any : { items: [] };
       const videoMap = new Map<string, any>();
       for (const v of videoData.items ?? []) {
@@ -456,7 +471,7 @@ const searchTracks = tool(
   "Search YouTube for music tracks. Returns titles, URLs, channels, and durations. " +
     "Uses YouTube Data API v3 when YOUTUBE_API_KEY is set, otherwise falls back to yt-dlp.",
   {
-    query: z.string().describe("Search terms (e.g. 'Kendrick Lamar HUMBLE', 'lo-fi hip hop')"),
+    query: z.string().max(200).describe("Search terms (e.g. 'Kendrick Lamar HUMBLE', 'lo-fi hip hop')"),
     max_results: z
       .number()
       .min(1)
@@ -473,8 +488,8 @@ const playTrack = tool(
     "Provide a search query OR a YouTube URL. " +
     "Audio plays in the background — use player_control to pause/stop.",
   {
-    query: z.string().optional().describe("Search query to find and play (e.g. 'Radiohead Karma Police')"),
-    url: z.string().optional().describe("Direct YouTube URL to play"),
+    query: z.string().max(200).optional().describe("Search query to find and play (e.g. 'Radiohead Karma Police')"),
+    url: z.string().max(500).optional().describe("Direct YouTube URL to play"),
   },
   playTrackHandler,
 );
@@ -487,8 +502,8 @@ const playPlaylist = tool(
     tracks: z
       .array(
         z.object({
-          artist: z.string().describe("Artist name"),
-          title: z.string().describe("Track title"),
+          artist: z.string().max(200).describe("Artist name"),
+          title: z.string().max(200).describe("Track title"),
         }),
       )
       .min(1)

@@ -285,13 +285,13 @@ const collectionAdd = tool(
   "collection_add",
   "Add a record to the user's collection. Stores artist, title, format, year, label, rating, notes, status, and tags in local SQLite.",
   {
-    artist: z.string().describe("Artist name"),
-    title: z.string().describe("Album/release title"),
-    format: z.string().optional().describe("Format (vinyl, CD, cassette, digital)"),
+    artist: z.string().max(200).describe("Artist name"),
+    title: z.string().max(200).describe("Album/release title"),
+    format: z.string().max(50).optional().describe("Format (vinyl, CD, cassette, digital)"),
     year: z.number().optional().describe("Release year"),
-    label: z.string().optional().describe("Record label"),
+    label: z.string().max(200).optional().describe("Record label"),
     rating: z.number().min(1).max(5).optional().describe("Rating 1-5"),
-    notes: z.string().optional().describe("Personal notes"),
+    notes: z.string().max(2000).optional().describe("Personal notes"),
     status: z
       .enum(["owned", "wishlist", "sold", "ordered"])
       .optional()
@@ -305,14 +305,14 @@ const collectionSearch = tool(
   "collection_search",
   "Search the user's record collection. Filter by text query, artist, status, tag, or format. Returns matching records with tags.",
   {
-    query: z.string().optional().describe("Text search across artist, title, and label"),
-    artist: z.string().optional().describe("Filter by artist name"),
+    query: z.string().max(200).optional().describe("Text search across artist, title, and label"),
+    artist: z.string().max(200).optional().describe("Filter by artist name"),
     status: z
       .enum(["owned", "wishlist", "sold", "ordered"])
       .optional()
       .describe("Filter by status"),
-    tag: z.string().optional().describe("Filter by tag"),
-    format: z.string().optional().describe("Filter by format"),
+    tag: z.string().max(100).optional().describe("Filter by tag"),
+    format: z.string().max(50).optional().describe("Filter by format"),
     limit: z.number().optional().describe("Max results (default 20)"),
   },
   collectionSearchHandler,
@@ -323,13 +323,13 @@ const collectionUpdate = tool(
   "Update a record in the collection by ID. Any fields provided will be updated; tags are replaced entirely if provided.",
   {
     id: z.number().describe("Record ID to update"),
-    artist: z.string().optional().describe("New artist name"),
-    title: z.string().optional().describe("New title"),
-    format: z.string().optional().describe("New format"),
+    artist: z.string().max(200).optional().describe("New artist name"),
+    title: z.string().max(200).optional().describe("New title"),
+    format: z.string().max(50).optional().describe("New format"),
     year: z.number().optional().describe("New year"),
-    label: z.string().optional().describe("New label"),
+    label: z.string().max(200).optional().describe("New label"),
     rating: z.number().min(1).max(5).optional().describe("New rating 1-5"),
-    notes: z.string().optional().describe("New notes"),
+    notes: z.string().max(2000).optional().describe("New notes"),
     status: z.enum(["owned", "wishlist", "sold", "ordered"]).optional().describe("New status"),
     tags: z.array(z.string()).optional().describe("Replace all tags"),
   },

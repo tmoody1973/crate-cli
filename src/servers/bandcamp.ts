@@ -16,6 +16,7 @@ import * as cheerio from "cheerio";
 import RSSParser from "rss-parser";
 
 const USER_AGENT = "Crate/1.0 (music-research-agent)";
+const FETCH_TIMEOUT_MS = 15_000;
 const rssParser = new RSSParser();
 
 // ---------------------------------------------------------------------------
@@ -63,9 +64,15 @@ export async function bandcampFetch(url: string, options?: { method?: string; bo
       headers["Content-Type"] = "application/json";
       init.body = JSON.stringify(options.body);
     }
-    const resp = await fetch(url, init);
-    if (!resp.ok) return null;
-    return await resp.text();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const resp = await fetch(url, { ...init, signal: controller.signal });
+      if (!resp.ok) return null;
+      return await resp.text();
+    } finally {
+      clearTimeout(timer);
+    }
   } catch {
     return null;
   }
@@ -365,13 +372,14 @@ const searchBandcamp = tool(
     "Supports location filtering to find artists from a specific city or region. " +
     "Use for finding independent artists and releases on Bandcamp.",
   {
-    query: z.string().describe("Search terms (e.g. 'Boards of Canada', 'lo-fi hip hop')"),
+    query: z.string().max(200).describe("Search terms (e.g. 'Boards of Canada', 'lo-fi hip hop')"),
     item_type: z
       .enum(["artist", "album", "track", "label"])
       .optional()
       .describe("Filter by type (default: all types)"),
     location: z
       .string()
+      .max(200)
       .optional()
       .describe("Filter results by city/region (e.g. 'Milwaukee', 'Chicago', 'Detroit')"),
   },
@@ -541,10 +549,10 @@ const discoverMusic = tool(
     "Supports location filtering by city name (e.g. 'Milwaukee', 'Detroit', 'Berlin'). " +
     "Use this for discovering local music scenes.",
   {
-    tag: z.string().describe("Genre tag (e.g. 'ambient', 'hip-hop-rap', 'post-punk')"),
+    tag: z.string().max(100).describe("Genre tag (e.g. 'ambient', 'hip-hop-rap', 'post-punk')"),
     sort: z.enum(["top", "new", "rec"]).optional().describe("Sort order (default: top)"),
     format: z.enum(["vinyl", "cd", "cassette", "digital"]).optional().describe("Physical format filter"),
-    location: z.string().optional().describe("City or region name for location filter (e.g. 'Milwaukee', 'Detroit', 'London')"),
+    location: z.string().max(200).optional().describe("City or region name for location filter (e.g. 'Milwaukee', 'Detroit', 'London')"),
   },
   discoverMusicHandler,
 );
@@ -582,7 +590,7 @@ const getTagInfo = tool(
     "Returns tag description and related tags. " +
     "Use to explore the genre taxonomy and find related styles.",
   {
-    tag: z.string().describe("Genre tag (e.g. 'ambient', 'hip-hop-rap', 'post-punk')"),
+    tag: z.string().max(100).describe("Genre tag (e.g. 'ambient', 'hip-hop-rap', 'post-punk')"),
   },
   getTagInfoHandler,
 );

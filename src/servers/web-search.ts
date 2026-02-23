@@ -328,7 +328,7 @@ const searchWeb = tool(
     "Uses Tavily (keyword/filtered) or Exa (semantic/neural) depending on query type. " +
     "Tavily is default and best for specific queries. Exa is better for conceptual discovery.",
   {
-    query: z.string().describe(
+    query: z.string().max(500).describe(
       "Search query. Be specific for best results. " +
         "Good: 'Milwaukee experimental jazz scene 2024 2025' " +
         "Good: 'Bristol bass music producers underground labels' " +
