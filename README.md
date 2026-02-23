@@ -92,7 +92,7 @@ Crate includes a research-backed influence mapping system based on the [Stell-R 
 
 Crate implements this in three layers:
 
-**Review-Driven Discovery** — Search 12 music publications, extract full review text, and identify co-mentioned artists using influence phrase detection ("influenced by", "reminiscent of", "in the vein of").
+**Review-Driven Discovery** — Search 23 music publications using Tavily keyword search (advanced depth) with Exa neural discovery for related reviews. Extract full review text and identify co-mentioned artists using influence phrase detection ("influenced by", "reminiscent of", "in the vein of").
 
 ```
 > Search for reviews of Burial's Untrue and extract all influence signals
@@ -106,7 +106,7 @@ Found 8 co-mentions with influence context:
   ...
 ```
 
-**Influence Tracing** — Build multi-hop paths between artists using web search and co-mention extraction. Find bridge artists that connect disconnected genres.
+**Influence Tracing** — Build multi-hop paths between artists using Tavily advanced search for direct connections and Exa neural search for neighborhood discovery. Find bridge artists that connect disconnected genres via Exa crossover search.
 
 ```
 > Trace the influence path from Kraftwerk to Radiohead
@@ -139,7 +139,7 @@ See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep
 |--------|-------|------------------|
 | **MusicBrainz** | 6 (artist, release, recording search + details) | No |
 | **Wikipedia** | 3 (search, summary, full article) | No |
-| **Bandcamp** | 6 (search, artist, album, discover + location, tags, editorial) | No |
+| **Bandcamp** | 7 (search, artist, album, artist tracks, discover + location, tags, editorial) | No |
 | **YouTube** | 4 (search, play track, play playlist, player control) | No* |
 | **Radio Browser** | 4 (search, browse, tags, play station) | No |
 | **News / RSS** | 3 (search news, latest reviews, list sources) | No |
@@ -190,6 +190,7 @@ Crate's agent has access to **82 tools** across 15 MCP servers. You don't call t
 | `get_album` | Full album details: tracklist, tags, credits, pricing |
 | `discover_music` | Browse trending/new releases by genre tag. Supports `location` filter for city-based discovery |
 | `get_tag_info` | Genre/tag info and related tags |
+| `get_artist_tracks` | Get all tracks from an artist's discography in one call — essential for verified playlist building with independent artists |
 | `get_bandcamp_editorial` | Bandcamp Daily articles, reviews, and features |
 
 ### YouTube (always available)
@@ -306,10 +307,10 @@ Purpose-built tools for tracing artistic influence through music criticism, base
 
 | Tool | What it does |
 |------|-------------|
-| `search_reviews` | Search 12 music publications (Pitchfork, The Quietus, Resident Advisor, Stereogum, etc.) for album/artist reviews |
+| `search_reviews` | Search 23 music publications (Pitchfork, The Quietus, Resident Advisor, AllMusic, Bandcamp Daily, etc.) for album/artist reviews. Uses Tavily advanced depth + Exa findSimilar for related review discovery |
 | `extract_influences` | Extract artist co-mentions from review text using heuristic name extraction and influence phrase detection |
-| `trace_influence_path` | Find a chain of influence between two artists (depth 1–5) with evidence for each link |
-| `find_bridge_artists` | Find artists that connect two genres or scenes, scored by cross-genre co-mention density |
+| `trace_influence_path` | Find a chain of influence between two artists (depth 1–5) with evidence for each link. Tavily advanced for direct paths, Exa neural for neighborhood exploration |
+| `find_bridge_artists` | Find artists that connect two genres or scenes, scored by cross-genre co-mention density. Uses Exa neural search for crossover discovery |
 
 ### Influence Cache (always available)
 
@@ -349,7 +350,7 @@ sudo apt install yt-dlp mpv    # or your package manager
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/crate-cli.git
+git clone https://github.com/tmoody1973/crate-cli.git
 cd crate-cli
 npm install
 cp .env.example .env
@@ -446,7 +447,7 @@ crate-cli/
 │   │   ├── genius.ts          # Genius MCP server (6 tools)
 │   │   ├── lastfm.ts          # Last.fm MCP server (8 tools)
 │   │   ├── wikipedia.ts       # Wikipedia MCP server (3 tools)
-│   │   ├── bandcamp.ts        # Bandcamp MCP server (6 tools)
+│   │   ├── bandcamp.ts        # Bandcamp MCP server (7 tools)
 │   │   ├── youtube.ts         # YouTube player MCP server (4 tools)
 │   │   ├── radio.ts           # Radio Browser MCP server (4 tools)
 │   │   ├── news.ts            # News / RSS MCP server (3 tools, 10 feeds)
