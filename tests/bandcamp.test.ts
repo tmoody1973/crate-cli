@@ -742,4 +742,251 @@ describe("bandcamp", () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // get_artist_tracks
+  // -------------------------------------------------------------------------
+  describe("getArtistTracksHandler", () => {
+    const searchResultHtml = `<html><div class="searchresult band">
+      <div class="heading"><a href="https://tomppabeats.bandcamp.com?from=search">Tomppabeats</a></div>
+    </div></html>`;
+
+    const artistPagedata = {
+      name: "Tomppabeats",
+      discography: [
+        { item_type: "album", page_url: "/album/harbor", title: "Harbor" },
+        { item_type: "album", page_url: "/album/departed", title: "Departed" },
+      ],
+    };
+
+    const makeArtistHtml = (pd: object) => {
+      const blob = encodeURIComponent(JSON.stringify(pd));
+      return `<html><div id="pagedata" data-blob="${blob}"></div></html>`;
+    };
+
+    const makeAlbumHtml = (title: string, tracks: { title: string; track_num?: number; duration?: number; artist?: string }[]) => {
+      const tralbum = JSON.stringify({ trackinfo: tracks });
+      const pd = encodeURIComponent(JSON.stringify({ current: { title } }));
+      return `<html><div id="pagedata" data-blob="${pd}"></div><div data-tralbum='${tralbum}'></div></html>`;
+    };
+
+    it("searches for artist, fetches albums, and returns flat tracklist", async () => {
+      // 1) search
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => searchResultHtml });
+      // 2) artist page
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => makeArtistHtml(artistPagedata) });
+      // 3) album 1
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Harbor", [
+          { title: "Monday Loop", track_num: 1, duration: 112 },
+          { title: "Sunlit Room", track_num: 2, duration: 95 },
+        ]),
+      });
+      // 4) album 2
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Departed", [
+          { title: "Goodbye", track_num: 1, duration: 140 },
+        ]),
+      });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({ artist: "Tomppabeats" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.artist).toBe("Tomppabeats");
+      expect(data.artist_url).toBe("https://tomppabeats.bandcamp.com");
+      expect(data.albums_scanned).toBe(2);
+      expect(data.albums_total).toBe(2);
+      expect(data.track_count).toBe(3);
+      expect(data.tracks[0].title).toBe("Monday Loop");
+      expect(data.tracks[0].album).toBe("Harbor");
+      expect(data.tracks[0].number).toBe(1);
+      expect(data.tracks[0].duration).toBe("1:52");
+      expect(data.tracks[2].title).toBe("Goodbye");
+      expect(data.tracks[2].album).toBe("Departed");
+    }, 15_000);
+
+    it("skips search step when direct URL is provided", async () => {
+      // 1) artist page (no search call)
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => makeArtistHtml(artistPagedata) });
+      // 2) album 1
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Harbor", [
+          { title: "Monday Loop", track_num: 1, duration: 112 },
+        ]),
+      });
+      // 3) album 2
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Departed", [
+          { title: "Goodbye", track_num: 1, duration: 140 },
+        ]),
+      });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({
+        artist: "Tomppabeats",
+        url: "https://tomppabeats.bandcamp.com",
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      // No search call — first call should be the artist page URL, not search
+      expect(mockFetch.mock.calls[0][0]).toBe("https://tomppabeats.bandcamp.com");
+      expect(data.artist).toBe("Tomppabeats");
+      expect(data.track_count).toBe(2);
+    }, 10_000);
+
+    it("returns error when artist search fails", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({ artist: "NonexistentArtist" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.error).toContain("No Bandcamp results");
+    });
+
+    it("returns error when artist not found in search results", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => "<html><div>No results</div></html>",
+      });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({ artist: "NonexistentArtist" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.error).toContain("not found on Bandcamp");
+    });
+
+    it("returns error when artist page fetch fails", async () => {
+      // 1) search succeeds
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => searchResultHtml });
+      // 2) artist page fails
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({ artist: "Tomppabeats" });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.error).toContain("Failed to fetch artist page");
+    });
+
+    it("respects max_albums parameter", async () => {
+      const bigDiscography = {
+        name: "Prolific Artist",
+        discography: Array.from({ length: 8 }, (_, i) => ({
+          item_type: "album",
+          page_url: `/album/album-${i + 1}`,
+          title: `Album ${i + 1}`,
+        })),
+      };
+
+      // 1) artist page
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => makeArtistHtml(bigDiscography) });
+      // 2) only 2 album fetches (max_albums=2)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Album 1", [{ title: "Track A", track_num: 1 }]),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Album 2", [{ title: "Track B", track_num: 1 }]),
+      });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({
+        artist: "Prolific Artist",
+        url: "https://prolific.bandcamp.com",
+        max_albums: 2,
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.albums_scanned).toBe(2);
+      expect(data.albums_total).toBe(8);
+      expect(data.track_count).toBe(2);
+      // Should have fetched artist page + 2 albums = 3 calls
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("uses DOM fallback when pagedata has no discography", async () => {
+      const domArtistHtml = `<html>
+        <meta property="og:title" content="Lo-Fi Producer" />
+        <div id="music-grid">
+          <li><a href="/album/chill-beats">link</a><p class="title">Chill Beats</p></li>
+          <li><a href="/track/single-track">link</a><p class="title">Single</p></li>
+        </div>
+      </html>`;
+
+      // 1) artist page (no pagedata, DOM fallback)
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => domArtistHtml });
+      // 2) album fetch (the /track/ link should be skipped)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Chill Beats", [{ title: "Rainy Day", track_num: 1, duration: 180 }]),
+      });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({
+        artist: "Lo-Fi Producer",
+        url: "https://lofi.bandcamp.com",
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.artist).toBe("Lo-Fi Producer");
+      // Only the album link, not the /track/ link
+      expect(data.albums_scanned).toBe(1);
+      expect(data.tracks[0].title).toBe("Rainy Day");
+    });
+
+    it("skips failed album fetches gracefully", async () => {
+      // 1) artist page
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => makeArtistHtml(artistPagedata) });
+      // 2) album 1 fails
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+      // 3) album 2 succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Departed", [{ title: "Goodbye", track_num: 1 }]),
+      });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({
+        artist: "Tomppabeats",
+        url: "https://tomppabeats.bandcamp.com",
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      expect(data.track_count).toBe(1);
+      expect(data.tracks[0].title).toBe("Goodbye");
+    });
+
+    it("omits track artist field when it matches the main artist", async () => {
+      // 1) artist page
+      mockFetch.mockResolvedValueOnce({ ok: true, text: async () => makeArtistHtml({ name: "MainArtist", discography: [{ item_type: "album", page_url: "/album/collab", title: "Collab" }] }) });
+      // 2) album with mixed artists
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () => makeAlbumHtml("Collab", [
+          { title: "Solo Track", track_num: 1, artist: "MainArtist" },
+          { title: "Guest Track", track_num: 2, artist: "FeaturedArtist" },
+        ]),
+      });
+
+      const { getArtistTracksHandler } = await import("../src/servers/bandcamp.js");
+      const result = await getArtistTracksHandler({
+        artist: "MainArtist",
+        url: "https://mainartist.bandcamp.com",
+      });
+      const data = JSON.parse(result.content[0].text);
+
+      // Solo track should NOT have artist field (matches main artist)
+      expect(data.tracks[0].artist).toBeUndefined();
+      // Guest track SHOULD have artist field (different from main artist)
+      expect(data.tracks[1].artist).toBe("FeaturedArtist");
+    });
+  });
+
 });

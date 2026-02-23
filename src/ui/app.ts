@@ -107,6 +107,8 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Fetching Bandcamp artist page...";
     case "get_album":
       return "Fetching album details from Bandcamp...";
+    case "get_artist_tracks":
+      return `Finding tracks for "${input?.artist ?? "artist"}" on Bandcamp...`;
     case "discover_music":
       return input?.location
         ? `Discovering ${input?.tag ?? "music"} in ${input.location} on Bandcamp...`

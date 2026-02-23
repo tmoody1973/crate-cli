@@ -470,6 +470,137 @@ const getAlbum = tool(
 );
 
 // ---------------------------------------------------------------------------
+// get_artist_tracks handler
+// ---------------------------------------------------------------------------
+
+export async function getArtistTracksHandler(args: {
+  artist: string;
+  url?: string;
+  max_albums?: number;
+}) {
+  try {
+    let artistUrl = args.url;
+    let artistName = args.artist;
+
+    // Step 1: If no URL, search for the artist on Bandcamp
+    if (!artistUrl) {
+      const searchUrl = `https://bandcamp.com/search?q=${encodeURIComponent(args.artist)}&item_type=b`;
+      const searchHtml = await bandcampFetch(searchUrl);
+      if (!searchHtml) throw new Error(`No Bandcamp results for artist: ${args.artist}`);
+
+      const $s = cheerio.load(searchHtml);
+      const firstResult = $s(".searchresult.band .heading a").first();
+      const href = firstResult.attr("href");
+      if (!href) throw new Error(`Artist "${args.artist}" not found on Bandcamp`);
+
+      artistUrl = href.split("?")[0] ?? href;
+      const foundName = firstResult.text().trim();
+      if (foundName) artistName = foundName;
+    }
+
+    // Step 2: Get artist page for discography
+    const artistHtml = await bandcampFetch(artistUrl);
+    if (!artistHtml) throw new Error(`Failed to fetch artist page: ${artistUrl}`);
+
+    const pagedata = extractPagedata(artistHtml);
+    const $ = cheerio.load(artistHtml);
+
+    const resolvedName =
+      pagedata?.name ?? $("meta[property='og:title']").attr("content") ?? artistName;
+
+    // Build album URLs from pagedata or DOM
+    const albumUrls: { url: string; title: string }[] = [];
+
+    const discography = pagedata?.discography ?? [];
+    for (const item of discography) {
+      if (item.item_type === "album" && item.page_url) {
+        albumUrls.push({
+          url: new URL(item.page_url, artistUrl).href,
+          title: item.title ?? "Unknown",
+        });
+      }
+    }
+
+    // DOM fallback
+    if (albumUrls.length === 0) {
+      $("#music-grid li").each((_, el) => {
+        const href = $(el).find("a").first().attr("href");
+        const title = $(el).find("p.title").text().trim();
+        if (href && !href.includes("/track/") && title) {
+          albumUrls.push({ url: new URL(href, artistUrl).href, title });
+        }
+      });
+    }
+
+    // Step 3: Fetch tracks from albums (limit to avoid excessive requests)
+    const maxAlbums = Math.min(args.max_albums ?? 5, 10);
+    const allTracks: {
+      title: string;
+      album: string;
+      album_url: string;
+      number?: number;
+      duration?: string;
+      artist?: string;
+    }[] = [];
+
+    for (const album of albumUrls.slice(0, maxAlbums)) {
+      const albumHtml = await bandcampFetch(album.url);
+      if (!albumHtml) continue;
+
+      const tralbum = extractTralbum(albumHtml);
+      const albumPagedata = extractPagedata(albumHtml);
+      const albumTitle = albumPagedata?.current?.title ?? album.title;
+
+      for (const t of tralbum?.trackinfo ?? []) {
+        allTracks.push({
+          title: t.title,
+          album: albumTitle,
+          album_url: album.url,
+          ...(t.track_num != null && { number: t.track_num }),
+          ...(t.duration != null && { duration: formatDuration(t.duration) }),
+          ...(t.artist && t.artist !== resolvedName && { artist: t.artist }),
+        });
+      }
+    }
+
+    return toolResult({
+      artist: resolvedName,
+      artist_url: artistUrl,
+      albums_scanned: Math.min(albumUrls.length, maxAlbums),
+      albums_total: albumUrls.length,
+      track_count: allTracks.length,
+      tracks: allTracks,
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
+const getArtistTracks = tool(
+  "get_artist_tracks",
+  "Get all tracks from a Bandcamp artist's discography in one call. " +
+    "Searches for the artist, fetches their albums, and returns a flat list of verified tracks. " +
+    "Essential for building playlists with underground/independent artists. " +
+    "Provide either the artist name (auto-searches Bandcamp) or a direct Bandcamp URL.",
+  {
+    artist: z.string().max(200).describe("Artist name to search for on Bandcamp"),
+    url: z
+      .string()
+      .url()
+      .optional()
+      .describe("Direct Bandcamp artist URL (skips search step)"),
+    max_albums: z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .optional()
+      .describe("Max albums to scan for tracks (default: 5, max: 10)"),
+  },
+  getArtistTracksHandler,
+);
+
+// ---------------------------------------------------------------------------
 // discover_music handler
 // ---------------------------------------------------------------------------
 
@@ -756,5 +887,5 @@ const getBandcampEditorial = tool(
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [searchBandcamp, getArtistPage, getAlbum, discoverMusic, getTagInfo, getBandcampEditorial],
+  tools: [searchBandcamp, getArtistPage, getAlbum, getArtistTracks, discoverMusic, getTagInfo, getBandcampEditorial],
 });
