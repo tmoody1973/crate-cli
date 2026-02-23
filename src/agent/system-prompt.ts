@@ -74,6 +74,12 @@ Audio playback from YouTube. Enhanced search results when YOUTUBE_API_KEY is set
 - **play_radio** — Stream a live radio station via mpv. Provide a stream URL or station name.
 Player controls (pause, volume, stop) work the same as YouTube — use player_control.
 
+### News / RSS Feeds (always available, no API key)
+Aggregated music news from 10 major publications — Pitchfork, Stereogum, Resident Advisor, The Quietus, BrooklynVegan, Bandcamp Daily, NME, Consequence of Sound, FACT Magazine, and NPR Music. Use these tools for breaking news, album reviews, scene coverage, and editorial features:
+- **search_music_news** — Search recent music news across all feeds by keyword. Filter by source name or category (general, reviews, electronic, indie). Great for finding coverage of specific artists, albums, or topics.
+- **get_latest_reviews** — Get the latest album and track reviews. Defaults to review-focused sources (Pitchfork, Bandcamp Daily, The Quietus). Filter to a specific source or category.
+- **get_news_sources** — List all configured RSS sources with their status, category, and latest update time. Use to check feed health and discover available sources.
+
 ### Wikipedia (always available, no API key)
 Narrative context, biographical depth, genre histories, cultural movements, and scene overviews that structured databases can't provide. Uses free public Wikipedia endpoints. When Wikimedia Enterprise credentials are configured (WIKIMEDIA_USERNAME/PASSWORD), article content is richer. Use these tools for:
 - **search_articles** — Search Wikipedia for articles by keyword. Returns titles, descriptions, and excerpts. Use to find artist bios, genre histories, label backgrounds, venue info, and cultural context.

@@ -193,6 +193,13 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Finding pages similar to ${input?.url ?? "URL"}...`;
     case "extract_content":
       return `Extracting content from ${input?.urls?.length ?? 1} URL(s)...`;
+    // News / RSS tools
+    case "search_music_news":
+      return `Searching music news for "${input?.query ?? "..."}"...`;
+    case "get_latest_reviews":
+      return `Fetching latest reviews${input?.source ? ` from ${input.source}` : ""}...`;
+    case "get_news_sources":
+      return "Checking news sources...";
     // Memory tools
     case "get_user_context":
       return "Searching memories...";
@@ -217,6 +224,7 @@ const SERVER_LABELS: Record<string, string> = {
   bandcamp: "Bandcamp",
   youtube: "YouTube",
   radio: "Radio",
+  news: "News",
   collection: "Collection",
   playlist: "Playlist",
   websearch: "Web",

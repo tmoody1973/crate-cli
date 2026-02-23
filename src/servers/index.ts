@@ -10,6 +10,7 @@ import { collectionServer } from "./collection.js";
 import { playlistServer } from "./playlist.js";
 import { memoryServer } from "./memory.js";
 import { radioServer } from "./radio.js";
+import { newsServer } from "./news.js";
 import { webSearchServer, hasTavily, hasExa } from "./web-search.js";
 
 export function getActiveServers(): Record<string, any> {
@@ -30,6 +31,7 @@ export function getActiveServers(): Record<string, any> {
   servers.bandcamp = bandcampServer; // Always available (no API key required)
   servers.youtube = youtubeServer; // Always available (yt-dlp + mpv)
   servers.radio = radioServer; // Always available (no API key)
+  servers.news = newsServer; // Always available (RSS feeds, no API key)
   servers.collection = collectionServer; // Always available (local SQLite)
   servers.playlist = playlistServer; // Always available (local SQLite)
   if (hasTavily() || hasExa()) servers.websearch = webSearchServer;
@@ -46,7 +48,7 @@ export function getServerStatus(): { active: string[]; inactive: string[] } {
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
-    "radio", "collection", "playlist", "websearch",
+    "radio", "news", "collection", "playlist", "websearch",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };
