@@ -5,16 +5,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Mock the web-search module so influence handlers don't make real API calls
 // ---------------------------------------------------------------------------
 
-const { mockSearchWeb, mockExtractContent } = vi.hoisted(() => ({
+const { mockSearchWeb, mockExtractContent, mockFindSimilar, mockHasExa } = vi.hoisted(() => ({
   mockSearchWeb: vi.fn(),
   mockExtractContent: vi.fn(),
+  mockFindSimilar: vi.fn(),
+  mockHasExa: vi.fn(() => false),
 }));
 
 vi.mock("../src/servers/web-search.js", () => ({
   searchWebHandler: mockSearchWeb,
   extractContentHandler: mockExtractContent,
+  findSimilarHandler: mockFindSimilar,
   hasTavily: () => true,
-  hasExa: () => false,
+  hasExa: mockHasExa,
 }));
 
 // ---------------------------------------------------------------------------
@@ -144,7 +147,21 @@ describe("REVIEW_DOMAINS", () => {
     expect(REVIEW_DOMAINS).toContain("residentadvisor.net");
     expect(REVIEW_DOMAINS).toContain("stereogum.com");
     expect(REVIEW_DOMAINS).toContain("npr.org");
-    expect(REVIEW_DOMAINS.length).toBeGreaterThanOrEqual(10);
+    expect(REVIEW_DOMAINS.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it("contains new expanded publication domains", () => {
+    expect(REVIEW_DOMAINS).toContain("daily.bandcamp.com");
+    expect(REVIEW_DOMAINS).toContain("tinymixtapes.com");
+    expect(REVIEW_DOMAINS).toContain("rateyourmusic.com");
+    expect(REVIEW_DOMAINS).toContain("allmusic.com");
+    expect(REVIEW_DOMAINS).toContain("thewire.co.uk");
+    expect(REVIEW_DOMAINS).toContain("thefader.com");
+    expect(REVIEW_DOMAINS).toContain("aquariumdrunkard.com");
+    expect(REVIEW_DOMAINS).toContain("boomkat.com");
+    expect(REVIEW_DOMAINS).toContain("passionweiss.com");
+    expect(REVIEW_DOMAINS).toContain("thevinyldistrict.com");
+    expect(REVIEW_DOMAINS).toContain("nytimes.com");
   });
 });
 
@@ -156,6 +173,8 @@ describe("searchReviewsHandler", () => {
   beforeEach(() => {
     mockSearchWeb.mockReset();
     mockExtractContent.mockReset();
+    mockFindSimilar.mockReset();
+    mockHasExa.mockReturnValue(false);
   });
 
   it("searches with music publication domain filtering", async () => {
@@ -269,6 +288,185 @@ describe("searchReviewsHandler", () => {
     const data = parseResult(result);
     expect(data.error).toBeDefined();
   });
+
+  it("uses advanced search_depth for richer review text", async () => {
+    mockSearchWeb.mockResolvedValueOnce(webResult({ results: [] }));
+
+    await searchReviewsHandler({
+      artist: "Burial",
+      max_results: 5,
+      include_text: false,
+    });
+
+    expect(mockSearchWeb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search_depth: "advanced",
+      }),
+    );
+  });
+
+  it("calls findSimilar when Exa available and results sparse", async () => {
+    mockHasExa.mockReturnValue(true);
+
+    // Main search returns 1 result (sparse, max_results=5)
+    mockSearchWeb.mockResolvedValueOnce(
+      webResult({
+        results: [
+          {
+            title: "Aphex Twin Review",
+            url: "https://pitchfork.com/review/aphex-twin",
+            content: "A landmark album...",
+          },
+        ],
+      }),
+    );
+
+    // findSimilar returns additional reviews
+    mockFindSimilar.mockResolvedValueOnce(
+      webResult({
+        results: [
+          {
+            title: "Related Review",
+            url: "https://thequietus.com/review/aphex-twin",
+            content: "Another perspective on the album...",
+          },
+        ],
+      }),
+    );
+
+    const result = await searchReviewsHandler({
+      artist: "Aphex Twin",
+      max_results: 5,
+      include_text: false,
+    });
+
+    const data = parseResult(result);
+    expect(data.review_count).toBe(2);
+    expect(mockFindSimilar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://pitchfork.com/review/aphex-twin",
+        num_results: 3,
+        include_domains: expect.arrayContaining(["pitchfork.com"]),
+      }),
+    );
+  });
+
+  it("skips findSimilar when Exa not available", async () => {
+    mockHasExa.mockReturnValue(false);
+
+    mockSearchWeb.mockResolvedValueOnce(
+      webResult({
+        results: [
+          {
+            title: "Review",
+            url: "https://pitchfork.com/review",
+            content: "Some review...",
+          },
+        ],
+      }),
+    );
+
+    await searchReviewsHandler({
+      artist: "Test",
+      max_results: 5,
+      include_text: false,
+    });
+
+    expect(mockFindSimilar).not.toHaveBeenCalled();
+  });
+
+  it("skips findSimilar when results already meet max_results", async () => {
+    mockHasExa.mockReturnValue(true);
+
+    const fullResults = Array.from({ length: 3 }, (_, i) => ({
+      title: `Review ${i}`,
+      url: `https://pitchfork.com/review/${i}`,
+      content: `Content ${i}`,
+    }));
+
+    mockSearchWeb.mockResolvedValueOnce(webResult({ results: fullResults }));
+
+    await searchReviewsHandler({
+      artist: "Test",
+      max_results: 3,
+      include_text: false,
+    });
+
+    expect(mockFindSimilar).not.toHaveBeenCalled();
+  });
+
+  it("handles findSimilar failure gracefully", async () => {
+    mockHasExa.mockReturnValue(true);
+
+    mockSearchWeb.mockResolvedValueOnce(
+      webResult({
+        results: [
+          {
+            title: "Review",
+            url: "https://pitchfork.com/review",
+            content: "Some review...",
+          },
+        ],
+      }),
+    );
+
+    mockFindSimilar.mockRejectedValueOnce(new Error("Exa API error"));
+
+    const result = await searchReviewsHandler({
+      artist: "Test",
+      max_results: 5,
+      include_text: false,
+    });
+
+    // Should still return the original result without error
+    const data = parseResult(result);
+    expect(data.review_count).toBe(1);
+    expect(data.error).toBeUndefined();
+  });
+
+  it("deduplicates findSimilar results by URL", async () => {
+    mockHasExa.mockReturnValue(true);
+
+    mockSearchWeb.mockResolvedValueOnce(
+      webResult({
+        results: [
+          {
+            title: "Review",
+            url: "https://pitchfork.com/review",
+            content: "Original...",
+          },
+        ],
+      }),
+    );
+
+    // findSimilar returns a duplicate URL and a new one
+    mockFindSimilar.mockResolvedValueOnce(
+      webResult({
+        results: [
+          {
+            title: "Same Review",
+            url: "https://pitchfork.com/review",
+            content: "Duplicate...",
+          },
+          {
+            title: "New Review",
+            url: "https://thequietus.com/new-review",
+            content: "New content...",
+          },
+        ],
+      }),
+    );
+
+    const result = await searchReviewsHandler({
+      artist: "Test",
+      max_results: 5,
+      include_text: false,
+    });
+
+    const data = parseResult(result);
+    // 1 original + 1 new (duplicate filtered)
+    expect(data.review_count).toBe(2);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -356,6 +554,7 @@ describe("extractInfluencesHandler", () => {
 describe("traceInfluencePathHandler", () => {
   beforeEach(() => {
     mockSearchWeb.mockReset();
+    mockHasExa.mockReturnValue(false);
   });
 
   it("finds direct connection when both artists mentioned in results", async () => {
@@ -483,6 +682,53 @@ describe("traceInfluencePathHandler", () => {
     const data = parseResult(result);
     expect(data.error).toBeDefined();
   });
+
+  it("uses advanced search_depth for direct connection search", async () => {
+    mockSearchWeb.mockResolvedValueOnce(webResult({ results: [] }));
+
+    await traceInfluencePathHandler({
+      from_artist: "A",
+      to_artist: "B",
+      max_depth: 1,
+    });
+
+    expect(mockSearchWeb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search_depth: "advanced",
+      }),
+    );
+  });
+
+  it("uses exa provider for neighborhood searches", async () => {
+    // Direct search — no match
+    mockSearchWeb.mockResolvedValueOnce(
+      webResult({
+        results: [
+          {
+            title: "Unrelated",
+            url: "https://example.com",
+            content: "Nothing relevant.",
+          },
+        ],
+      }),
+    );
+
+    // Neighborhood searches (from + to)
+    mockSearchWeb.mockResolvedValueOnce(webResult({ results: [] }));
+    mockSearchWeb.mockResolvedValueOnce(webResult({ results: [] }));
+
+    await traceInfluencePathHandler({
+      from_artist: "A",
+      to_artist: "B",
+      max_depth: 3,
+    });
+
+    // First call = direct (tavily), second and third = neighborhoods (exa)
+    const calls = mockSearchWeb.mock.calls;
+    expect(calls[0][0].provider).toBe("tavily");
+    expect(calls[1][0].provider).toBe("exa");
+    expect(calls[2][0].provider).toBe("exa");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -492,6 +738,7 @@ describe("traceInfluencePathHandler", () => {
 describe("findBridgeArtistsHandler", () => {
   beforeEach(() => {
     mockSearchWeb.mockReset();
+    mockHasExa.mockReturnValue(false);
   });
 
   it("finds bridge artists between two genres", async () => {
@@ -624,5 +871,33 @@ describe("findBridgeArtistsHandler", () => {
 
     const data = parseResult(result);
     expect(data.error).toBeDefined();
+  });
+
+  it("uses exa provider for crossover search and tavily for genre searches", async () => {
+    // Crossover, genre A, genre B
+    mockSearchWeb.mockResolvedValue(
+      webResult({
+        results: [
+          {
+            title: "Results",
+            url: "https://example.com",
+            content: "some artists here.",
+          },
+        ],
+      }),
+    );
+
+    await findBridgeArtistsHandler({
+      genre_a: "jazz",
+      genre_b: "electronic",
+      limit: 5,
+    });
+
+    const calls = mockSearchWeb.mock.calls;
+    // First call = crossover (exa)
+    expect(calls[0][0].provider).toBe("exa");
+    // Second and third = genre A and B (tavily)
+    expect(calls[1][0].provider).toBe("tavily");
+    expect(calls[2][0].provider).toBe("tavily");
   });
 });

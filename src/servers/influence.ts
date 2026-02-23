@@ -17,6 +17,7 @@ import { z } from "zod";
 import {
   searchWebHandler,
   extractContentHandler,
+  findSimilarHandler,
   hasTavily,
   hasExa,
 } from "./web-search.js";
@@ -41,6 +42,17 @@ export const REVIEW_DOMAINS = [
   "theguardian.com",
   "sputnikmusic.com",
   "goutemesdisques.com",
+  "daily.bandcamp.com",
+  "tinymixtapes.com",
+  "rateyourmusic.com",
+  "allmusic.com",
+  "thewire.co.uk",
+  "thefader.com",
+  "aquariumdrunkard.com",
+  "boomkat.com",
+  "passionweiss.com",
+  "thevinyldistrict.com",
+  "nytimes.com",
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -202,13 +214,39 @@ export async function searchReviewsHandler(args: {
     const searchResult = await searchWebHandler({
       query,
       provider: "tavily",
-      search_depth: "basic",
+      search_depth: "advanced",
       topic: "general",
       include_domains: [...REVIEW_DOMAINS],
       max_results,
     });
 
     const searchData = JSON.parse(searchResult.content[0].text);
+
+    // If Exa is available and results are sparse, discover related reviews
+    if (hasExa() && (searchData.results ?? []).length < max_results) {
+      const bestUrl = (searchData.results ?? []).find((r: any) => r.url)?.url;
+      if (bestUrl) {
+        try {
+          const similarResult = await findSimilarHandler({
+            url: bestUrl,
+            num_results: 3,
+            include_domains: [...REVIEW_DOMAINS],
+          });
+          const similarData = JSON.parse(similarResult.content[0].text);
+          const existingUrls = new Set(
+            (searchData.results ?? []).map((r: any) => r.url),
+          );
+          for (const r of similarData.results ?? []) {
+            if (!existingUrls.has(r.url)) {
+              searchData.results.push(r);
+              existingUrls.add(r.url);
+            }
+          }
+        } catch {
+          // findSimilar is best-effort; proceed with Tavily results
+        }
+      }
+    }
 
     // Optionally extract full text from review URLs
     let reviews = (searchData.results ?? []).map((r: any) => ({
@@ -325,7 +363,7 @@ export async function traceInfluencePathHandler(args: {
     const directResult = await searchWebHandler({
       query: directQuery,
       provider: "tavily",
-      search_depth: "basic",
+      search_depth: "advanced",
       topic: "general",
       max_results: 3,
     });
@@ -378,14 +416,14 @@ export async function traceInfluencePathHandler(args: {
       const [fromResult, toResult] = await Promise.all([
         searchWebHandler({
           query: fromQuery,
-          provider: "tavily",
+          provider: "exa",
           search_depth: "basic",
           topic: "general",
           max_results: 3,
         }),
         searchWebHandler({
           query: toQuery,
-          provider: "tavily",
+          provider: "exa",
           search_depth: "basic",
           topic: "general",
           max_results: 3,
@@ -482,7 +520,7 @@ export async function findBridgeArtistsHandler(args: {
     const query = `artists "${genre_a}" "${genre_b}" crossover bridge genre influence`;
     const searchResult = await searchWebHandler({
       query,
-      provider: "tavily",
+      provider: "exa",
       search_depth: "advanced",
       topic: "general",
       max_results: 5,
@@ -618,10 +656,11 @@ function extractCitations(results: any[]): SourceCitation[] {
 
 const searchReviews = tool(
   "search_reviews",
-  "Search music publications for album reviews. Returns reviews from Pitchfork, " +
+  "Search 23 music publications for album reviews. Returns reviews from Pitchfork, " +
     "The Quietus, Resident Advisor, Stereogum, BrooklynVegan, FACT, NME, NPR, " +
-    "and other quality sources. Use for finding critical reception and extracting " +
-    "artist co-mentions as influence signals.",
+    "Bandcamp Daily, AllMusic, The Wire, The FADER, and more. Use for finding " +
+    "critical reception and extracting artist co-mentions as influence signals. " +
+    "If Exa is available, discovers additional related reviews via semantic similarity.",
   {
     artist: z.string().max(200).describe("Artist name to find reviews for"),
     album: z.string().max(200).optional().describe(

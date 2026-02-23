@@ -32,8 +32,8 @@ Crate implements this methodology through three layers:
 
 | Layer | Purpose | Speed | Data Source |
 |-------|---------|-------|-------------|
-| **Review-Driven Discovery** | Extract co-mentions from real music criticism | Seconds (web search) | 12 music publications |
-| **Influence Tracing** | Build multi-hop paths between artists | 5–20 seconds | Web search + co-mention extraction |
+| **Review-Driven Discovery** | Extract co-mentions from real music criticism | Seconds (web search) | 23 music publications |
+| **Influence Tracing** | Build multi-hop paths between artists | 5–20 seconds | Tavily + Exa neural search + co-mention extraction |
 | **Influence Cache** | Persist and query discovered connections | Instant (local SQLite) | Previously discovered edges |
 
 ---
@@ -42,9 +42,9 @@ Crate implements this methodology through three layers:
 
 ### What It Does
 
-Review-Driven Discovery searches 12 major music publications for album reviews, extracts full review text, and uses heuristic co-mention analysis to identify which artists are referenced in the context of another artist's work. It distinguishes between casual name-drops and explicit influence language.
+Review-Driven Discovery searches 23 music publications for album reviews using Tavily's advanced search depth for richer snippets. When Exa is available and initial results are sparse, it automatically discovers additional related reviews via semantic similarity (`findSimilar`). Full review text is extracted via Tavily for deeper co-mention analysis.
 
-### The 12 Publication Sources
+### The 23 Publication Sources
 
 | Publication | Domain | Known For |
 |-------------|--------|-----------|
@@ -60,6 +60,17 @@ Review-Driven Discovery searches 12 major music publications for album reviews, 
 | The Guardian | theguardian.com | Cultural criticism, long-form features |
 | Sputnikmusic | sputnikmusic.com | Community reviews, metal, progressive |
 | Goutemesdisques | goutemesdisques.com | French music criticism, international scope |
+| Bandcamp Daily | daily.bandcamp.com | Indie, underground, artist-direct |
+| Tiny Mix Tapes | tinymixtapes.com | Experimental, electronic, noise |
+| Rate Your Music | rateyourmusic.com | Community reviews, deep genre taxonomy |
+| AllMusic | allmusic.com | Comprehensive review database |
+| The Wire | thewire.co.uk | Avant-garde, experimental, improvised |
+| The FADER | thefader.com | Hip-hop, electronic, youth culture |
+| Aquarium Drunkard | aquariumdrunkard.com | Deep cuts, psychedelia, folk |
+| Boomkat | boomkat.com | Electronic, experimental editorial |
+| Passion of the Weiss | passionweiss.com | Hip-hop criticism |
+| The Vinyl District | thevinyldistrict.com | Physical media community |
+| New York Times | nytimes.com | Cultural criticism, mainstream crossover |
 
 ### How the Co-Mention Extraction Works
 
@@ -89,7 +100,7 @@ The `extractArtistMentions()` algorithm processes review text in five stages:
 
 | Tool | Description |
 |------|-------------|
-| `search_reviews` | Search 12 music publications for album/artist reviews. Optionally extract full review text for deeper analysis. |
+| `search_reviews` | Search 23 music publications for album/artist reviews using Tavily advanced depth. When Exa is available and results are sparse, discovers additional reviews via semantic similarity. Optionally extract full review text for deeper analysis. |
 | `extract_influences` | Feed review text (or a URL) through the co-mention extraction algorithm. Returns ranked artist mentions with context snippets and influence indicators. |
 
 ### Example Prompts
@@ -129,12 +140,12 @@ The `trace_influence_path` tool uses a three-stage strategy:
 **Stage 1: Direct Connection Search**
 Search for `"Artist A" "Artist B" influence connection music` across the web. If results mention both artists, a direct (depth-1) path exists.
 
-**Stage 2: Neighborhood Expansion**
-If no direct connection is found, search for each artist's influence neighborhood independently:
+**Stage 2: Neighborhood Expansion (Exa Neural Search)**
+If no direct connection is found, search for each artist's influence neighborhood independently using Exa's neural/semantic search (falls back to Tavily if Exa unavailable):
 - Search `"Artist A" similar artists influenced review`
 - Search `"Artist B" similar artists influenced review`
 
-Extract co-mentions from both result sets and find **overlap** — artists that appear in reviews of both A and B. These are bridge artists.
+Exa's neural search outperforms keyword matching for these conceptual queries, surfacing semantically related content that keyword searches miss. Extract co-mentions from both result sets and find **overlap** — artists that appear in reviews of both A and B. These are bridge artists.
 
 **Stage 3: Path Assembly**
 Assemble the path with evidence for each link and render it using Crate's visualization system:
@@ -154,9 +165,9 @@ Assemble the path with evidence for each link and render it using Crate's visual
 The `find_bridge_artists` tool specifically targets the most interesting discovery case: artists who connect two otherwise disconnected genres or scenes.
 
 It runs three parallel searches:
-1. A crossover search: `"genre A" "genre B" crossover bridge genre influence`
-2. A genre A artist search: `best "genre A" artists`
-3. A genre B artist search: `best "genre B" artists`
+1. A crossover search via **Exa neural search**: `"genre A" "genre B" crossover bridge genre influence` — Exa's semantic understanding excels at finding conceptual genre crossover content
+2. A genre A artist search via **Tavily**: `best "genre A" artists`
+3. A genre B artist search via **Tavily**: `best "genre B" artists`
 
 Artists appearing in both genre contexts are scored as bridge candidates. An artist found in the crossover search AND in both genre searches gets the highest score.
 
@@ -164,8 +175,8 @@ Artists appearing in both genre contexts are scored as bridge candidates. An art
 
 | Tool | Description |
 |------|-------------|
-| `trace_influence_path` | Find a chain of influence between two artists (depth 1–5). Returns a path with evidence per link and formatted visualization. |
-| `find_bridge_artists` | Find artists that connect two genres or scenes. Scores candidates by cross-genre co-mention density. |
+| `trace_influence_path` | Find a chain of influence between two artists (depth 1–5). Uses Tavily advanced depth for direct connection search and Exa neural search for neighborhood expansion. Returns a path with evidence per link and formatted visualization. |
+| `find_bridge_artists` | Find artists that connect two genres or scenes. Uses Exa neural search for conceptual crossover discovery and Tavily for genre-specific searches. Scores candidates by cross-genre co-mention density. |
 
 ### Example Prompts
 
@@ -403,7 +414,8 @@ When you ask an influence question, Crate follows this priority order:
    └── Results → cache_influence (relationship: "sample")
         │
 5. Influence Tools (search_reviews, extract_influences)
-   └── Review-driven co-mention extraction from 12 publications.
+   └── Review-driven co-mention extraction from 23 publications.
+   └── Exa semantic discovery enriches sparse results.
    └── Results → cache_batch_influences
         │
 6. Web Search (search_web, extract_content)
