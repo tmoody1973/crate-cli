@@ -4,6 +4,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useCallback } from "react";
 
+/* ── Artist portrait photos (Wikimedia Commons, CC-licensed) ───────── */
+
+const ARTIST_PHOTOS: Record<string, string> = {
+  "Fela Kuti":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Fela_Kuti_circa_1986.jpg/200px-Fela_Kuti_circa_1986.jpg",
+  "Beyoncé":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Beyonce_Smile.JPG/200px-Beyonce_Smile.JPG",
+  "Erykah Badu":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Erykah_Badu_%283746286025%29.jpg/200px-Erykah_Badu_%283746286025%29.jpg",
+  "James Brown":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/James-Brown_1973.jpg/200px-James-Brown_1973.jpg",
+  "Missy Elliott":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Missy_Elliott_2006.jpg/200px-Missy_Elliott_2006.jpg",
+  "Burna Boy":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Burna_Boy_%28cropped%29.jpg/200px-Burna_Boy_%28cropped%29.jpg",
+};
+
 /* ── Influence path data ─────────────────────────────────────────────── */
 
 const PATHS = [
@@ -252,6 +269,51 @@ function AlbumCover({
   );
 }
 
+/* ── Circular artist portrait ──────────────────────────────────────── */
+
+function ArtistPhoto({
+  artist,
+  size = 48,
+}: {
+  artist: string;
+  size?: number;
+}) {
+  const [error, setError] = useState(false);
+  const src = ARTIST_PHOTOS[artist];
+
+  if (!src || error) {
+    return (
+      <div
+        className="rounded-full bg-[#1a1a1a] border border-[#333] flex items-center justify-center text-[#555] shrink-0"
+        style={{ width: size, height: size }}
+      >
+        <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M5.5 21c0-3.87 2.91-7 6.5-7s6.5 3.13 6.5 7" />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative rounded-full overflow-hidden border border-[#333] shrink-0"
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={src}
+        alt={artist}
+        fill
+        className="object-cover"
+        sizes={`${size}px`}
+        loading="lazy"
+        unoptimized
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+}
+
 /* ── Animated SVG connector ────────────────────────────────────────── */
 
 function AnimatedConnector({
@@ -409,6 +471,11 @@ function ArtistNode({
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
     >
+      {/* Artist portrait */}
+      <div className="mb-2 transition-all duration-300 group-hover:scale-105">
+        <ArtistPhoto artist={artist} size={52} />
+      </div>
+
       {/* Album art */}
       <div
         className="relative w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] rounded-sm overflow-hidden mb-3 ring-1 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
@@ -490,6 +557,11 @@ function TimelineNode({
           isTop ? "order-1 mb-4" : "order-3 mt-4"
         }`}
       >
+        {/* Artist portrait */}
+        <div className="mb-1">
+          <ArtistPhoto artist={artist} size={40} />
+        </div>
+
         {/* Album art */}
         <div
           className="relative w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] rounded-sm overflow-hidden mb-2 ring-1 hover:scale-110 transition-transform duration-300"
@@ -1175,17 +1247,32 @@ export default function InfluenceDemo() {
 
       {/* Footer */}
       <footer className="border-t border-[#222] px-6 py-12">
-        <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555]">
-            Influence methodology: Harvard Data Science Review, Issue 7.4, Fall
-            2025
-          </p>
-          <Link
-            href="/"
-            className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555] hover:text-[#888] transition-colors"
-          >
-            ← Back to Crate
-          </Link>
+        <div className="mx-auto max-w-5xl flex flex-col items-center gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555]">
+              Influence methodology: Harvard Data Science Review, Issue 7.4, Fall
+              2025
+            </p>
+            <Link
+              href="/"
+              className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555] hover:text-[#888] transition-colors"
+            >
+              ← Back to Crate
+            </Link>
+          </div>
+          {/* Photo credits */}
+          <details className="w-full">
+            <summary className="font-[family-name:var(--font-geist-mono)] text-[0.55rem] tracking-[0.15em] uppercase text-[#444] cursor-pointer hover:text-[#666] transition-colors">
+              Photo credits
+            </summary>
+            <div className="mt-2 font-[family-name:var(--font-geist-mono)] text-[0.5rem] text-[#444] leading-relaxed space-y-0.5">
+              <p>Artist portraits via Wikimedia Commons.</p>
+              <p>Fela Kuti (c. 1986) — Public Domain. Beyoncé — TixGirl Ames Friedman, CC BY 2.0.</p>
+              <p>Erykah Badu — Patrik Hamberg, CC BY-SA 2.0. James Brown (1973) — Heinrich Klaffs, CC BY-SA 2.0.</p>
+              <p>Missy Elliott (2006) — Romana Pierzga, CC BY-SA 2.0. Burna Boy — Ameyaw Debrah, CC BY-SA 3.0.</p>
+              <p>Album artwork via Discogs.</p>
+            </div>
+          </details>
         </div>
       </footer>
 

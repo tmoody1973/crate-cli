@@ -257,6 +257,8 @@ export async function searchReviewsHandler(args: {
       url: r.url ?? "",
       source: extractDomain(r.url ?? ""),
       snippet: r.content ?? r.summary ?? "",
+      author: r.author ?? undefined,
+      published_date: r.published_date ?? undefined,
       full_text: undefined as string | undefined,
     }));
 
@@ -291,6 +293,8 @@ export async function searchReviewsHandler(args: {
         url: r.url,
         title: r.title,
         domain: r.source,
+        author: r.author ?? undefined,
+        published_date: r.published_date ?? undefined,
       })).filter((s: any) => s.url),
     });
   } catch (err) {
@@ -361,13 +365,14 @@ export async function traceInfluencePathHandler(args: {
     const explored: string[] = [];
     const path: PathStep[] = [];
 
-    // Step 1: Search for direct connection
+    // Step 1: Search for direct connection in music publications
     const directQuery = `"${from_artist}" "${to_artist}" influence connection music`;
     const directResult = await searchWebHandler({
       query: directQuery,
       provider: "tavily",
       search_depth: "advanced",
       topic: "general",
+      include_domains: [...REVIEW_DOMAINS],
       max_results: 3,
     });
     const directData = JSON.parse(directResult.content[0].text);
@@ -422,6 +427,7 @@ export async function traceInfluencePathHandler(args: {
           provider: "exa",
           search_depth: "basic",
           topic: "general",
+          include_domains: [...REVIEW_DOMAINS],
           max_results: 3,
         }),
         searchWebHandler({
@@ -429,6 +435,7 @@ export async function traceInfluencePathHandler(args: {
           provider: "exa",
           search_depth: "basic",
           topic: "general",
+          include_domains: [...REVIEW_DOMAINS],
           max_results: 3,
         }),
       ]);
@@ -519,13 +526,14 @@ export async function findBridgeArtistsHandler(args: {
   try {
     const { genre_a, genre_b, limit } = args;
 
-    // Search for artists that cross both genres
+    // Search music publications for artists that cross both genres
     const query = `artists "${genre_a}" "${genre_b}" crossover bridge genre influence`;
     const searchResult = await searchWebHandler({
       query,
       provider: "exa",
       search_depth: "advanced",
       topic: "general",
+      include_domains: [...REVIEW_DOMAINS],
       max_results: 5,
     });
     const searchData = JSON.parse(searchResult.content[0].text);
@@ -538,13 +546,14 @@ export async function findBridgeArtistsHandler(args: {
     // Use a combined subject to filter out the genre names themselves
     const mentions = extractArtistMentions(allText, `${genre_a} ${genre_b}`);
 
-    // Also search specifically for each genre to find overlap
+    // Also search music publications for each genre to find overlap
     const [genreAResult, genreBResult] = await Promise.all([
       searchWebHandler({
         query: `best "${genre_a}" artists`,
         provider: "tavily",
         search_depth: "basic",
         topic: "general",
+        include_domains: [...REVIEW_DOMAINS],
         max_results: 3,
       }),
       searchWebHandler({
@@ -552,6 +561,7 @@ export async function findBridgeArtistsHandler(args: {
         provider: "tavily",
         search_depth: "basic",
         topic: "general",
+        include_domains: [...REVIEW_DOMAINS],
         max_results: 3,
       }),
     ]);
@@ -650,6 +660,8 @@ function extractCitations(results: any[]): SourceCitation[] {
       url: r.url,
       title: r.title ?? undefined,
       domain: extractDomain(r.url),
+      author: r.author ?? undefined,
+      published_date: r.published_date ?? undefined,
     }));
 }
 
@@ -659,7 +671,7 @@ function extractCitations(results: any[]): SourceCitation[] {
 
 const searchReviews = tool(
   "search_reviews",
-  "Search 23 music publications for album reviews. Returns reviews from Pitchfork, " +
+  "Search 26 music publications for album reviews. Returns reviews from Pitchfork, " +
     "The Quietus, Resident Advisor, Stereogum, BrooklynVegan, FACT, NME, NPR, " +
     "Bandcamp Daily, AllMusic, The Wire, The FADER, and more. Use for finding " +
     "critical reception and extracting artist co-mentions as influence signals. " +

@@ -22,6 +22,8 @@ export interface SourceCitation {
   url: string;
   title?: string;
   domain: string; // e.g., "pitchfork.com"
+  author?: string; // Article author/byline when available
+  published_date?: string; // Publication date when available
 }
 
 export interface Connection {

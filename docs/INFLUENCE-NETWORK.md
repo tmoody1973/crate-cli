@@ -355,7 +355,7 @@ Crate's influence network addresses each of these limitations:
 Instead of "people also listened to", Crate uses "critics mentioned together." Music journalists contextualize artists within lineages, scenes, and movements that listening data alone can't capture. A Pitchfork reviewer comparing Burial to Massive Attack encodes decades of UK bass music history in a single sentence.
 
 **2. Evidence-based with full provenance.**
-Every connection in Crate's graph has a source: a specific review, a Last.fm similarity score, a MusicBrainz collaboration credit, a Wikipedia biography entry. You can trace *why* two artists are connected and evaluate the strength of the evidence yourself.
+Every connection in Crate's graph has a source: a specific review, a Last.fm similarity score, a MusicBrainz collaboration credit, a Wikipedia biography entry. Source citations include the article URL, publication domain, article title, author byline, and publication date when available. You can trace *why* two artists are connected and evaluate the strength of the evidence yourself.
 
 **3. Multi-source triangulation.**
 Crate doesn't rely on any single signal. It cross-references:
@@ -546,7 +546,7 @@ Agent decides tool strategy (cache-first priority)
 
 | Test Suite | Tests | Coverage |
 |-----------|-------|----------|
-| `tests/influence.test.ts` | 26 | Co-mention extraction, influence phrases, false positive filtering, all 4 handlers |
+| `tests/influence.test.ts` | 36 | Co-mention extraction, influence phrases, false positive filtering, all 4 handlers, source citations |
 | `tests/influence-cache.test.ts` | 40 | All 8 tools, upserts, alias resolution, BFS path-finding, batch operations, edge cases |
 | `tests/web-search.test.ts` | 28 | Both providers, fallback logic, error handling, domain filtering |
 | `tests/viz.test.ts` | 19 | All 6 rendering functions, edge cases, color coding |

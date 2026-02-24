@@ -66,6 +66,12 @@ export default function Home() {
               About
             </a>
             <a
+              href="#why-crate"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Why Crate
+            </a>
+            <a
               href="#sources"
               className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
             >
@@ -222,6 +228,122 @@ export default function Home() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* Why Not ChatGPT */}
+      <section id="why-crate" className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 max-w-2xl">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+              Why Not ChatGPT
+            </p>
+            <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+              They guess.
+              <br />
+              Crate shows receipts.
+            </h2>
+            <p className="text-lg leading-relaxed text-[#888]">
+              General-purpose AI answers music questions from frozen training data.
+              Crate searches 26 publications in real time and cites every connection
+              back to the review, the critic, and the publication that documented it.
+            </p>
+          </div>
+
+          <div className="grid gap-px border border-[#222] md:grid-cols-2">
+            {/* ChatGPT / Claude / Gemini column */}
+            <div className="bg-[#141414] p-8 sm:p-10">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#555] mb-6">
+                ChatGPT / Claude / Gemini
+              </p>
+              <div className="flex flex-col gap-5">
+                {[
+                  {
+                    label: "Training data",
+                    desc: "Answers from memorized patterns. No way to verify when or where a claim originated.",
+                  },
+                  {
+                    label: "Invented tracks",
+                    desc: "Will confidently generate plausible-sounding track names for obscure artists that don't exist.",
+                  },
+                  {
+                    label: "No sources",
+                    desc: "\"Aphex Twin was influenced by Kraftwerk\" — but which critic said that? Which review? No link, no proof.",
+                  },
+                  {
+                    label: "Stateless",
+                    desc: "Every question starts from zero. No accumulated knowledge. No graph that grows over time.",
+                  },
+                  {
+                    label: "One search provider",
+                    desc: "Generic web search, if any. No domain filtering to music publications.",
+                  },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <p className="font-[family-name:var(--font-geist-mono)] text-xs text-[#555] mb-1">
+                      {item.label}
+                    </p>
+                    <p className="text-sm leading-relaxed text-[#666]">
+                      {item.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Crate column */}
+            <div className="bg-[#0e0e0e] p-8 sm:p-10 border-l border-[#222]">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#e8a849] mb-6">
+                Crate
+              </p>
+              <div className="flex flex-col gap-5">
+                {[
+                  {
+                    label: "Live sourced evidence",
+                    desc: "Searches Pitchfork, The Wire, Resident Advisor, and 23 more publications in real time. Every connection has a URL.",
+                  },
+                  {
+                    label: "Verified tracks only",
+                    desc: "Every track is confirmed against Bandcamp, MusicBrainz, or YouTube before inclusion. No hallucinated tracklists.",
+                  },
+                  {
+                    label: "Full attribution",
+                    desc: "Publication, article URL, author byline, and date for every claim. Click through and read the source yourself.",
+                  },
+                  {
+                    label: "Persistent knowledge graph",
+                    desc: "Connections cache in a local SQLite graph. BFS path-finding gives instant results. The graph gets richer every session.",
+                  },
+                  {
+                    label: "Dual-provider search",
+                    desc: "Tavily for keyword precision + Exa for neural semantic discovery. Both constrained to 26 music publications.",
+                  },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <p className="font-[family-name:var(--font-geist-mono)] text-xs text-[#e8a849] mb-1">
+                      {item.label}
+                    </p>
+                    <p className="text-sm leading-relaxed text-[#888]">
+                      {item.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom line */}
+          <div className="mt-8 border border-[#222] bg-[#141414] px-8 py-6 text-center">
+            <p className="font-[family-name:var(--font-playfair)] text-lg leading-relaxed">
+              ChatGPT tells you what it <em className="text-[#666]">thinks</em> the connections are.
+              <br />
+              Crate <span className="text-[#e8a849]">shows you</span> the reviews that prove it.
+            </p>
           </div>
         </div>
       </section>
