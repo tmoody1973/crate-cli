@@ -1,0 +1,731 @@
+"use client";
+
+import Image from "next/image";
+
+const SOURCES = [
+  { name: "MusicBrainz", tools: 6, category: "Metadata" },
+  { name: "Bandcamp", tools: 7, category: "Independent" },
+  { name: "Discogs", tools: 9, category: "Collectors" },
+  { name: "YouTube", tools: 6, category: "Video" },
+  { name: "Last.fm", tools: 7, category: "Scrobbles" },
+  { name: "Genius", tools: 8, category: "Lyrics" },
+  { name: "Spotify", tools: 4, category: "Streaming" },
+  { name: "Wikipedia", tools: 3, category: "Encyclopedia" },
+  { name: "SoundStats", tools: 3, category: "Analysis" },
+  { name: "Events", tools: 6, category: "Live" },
+  { name: "Collection", tools: 5, category: "Library" },
+  { name: "Web Search", tools: 4, category: "Discovery" },
+  { name: "Influence", tools: 3, category: "Research" },
+  { name: "Influence Cache", tools: 8, category: "Network" },
+  { name: "Memory", tools: 3, category: "Personal" },
+];
+
+const PUBLICATIONS = [
+  "Pitchfork",
+  "The Quietus",
+  "Resident Advisor",
+  "Stereogum",
+  "BrooklynVegan",
+  "FACT Magazine",
+  "NME",
+  "Consequence of Sound",
+  "NPR",
+  "The Guardian",
+  "Sputnikmusic",
+  "Goûte Mes Disques",
+  "Bandcamp Daily",
+  "Tiny Mix Tapes",
+  "Rate Your Music",
+  "AllMusic",
+  "The Wire",
+  "The FADER",
+  "Aquarium Drunkard",
+  "Boomkat",
+  "Passion of the Weiss",
+  "The Vinyl District",
+  "New York Times",
+  "Paste Magazine",
+  "Exclaim!",
+  "PopMatters",
+];
+
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
+      {/* Nav */}
+      <nav className="fixed top-0 z-50 w-full border-b border-[#222] bg-[#0a0a0a]/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <span className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.25em] uppercase text-[#888]">
+            Crate
+          </span>
+          <div className="flex items-center gap-8">
+            <a
+              href="#about"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              About
+            </a>
+            <a
+              href="#sources"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Sources
+            </a>
+            <a
+              href="#stack"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Stack
+            </a>
+            <a
+              href="#research"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Research
+            </a>
+            <a
+              href="/influence-demo"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#e8a849] transition-colors hover:text-[#d4963d]"
+            >
+              Demo
+            </a>
+            <a
+              href="#get-started"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Install
+            </a>
+            <a
+              href="https://github.com/tmoody1973/crate-cli"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pt-20 overflow-hidden">
+        {/* Background image */}
+        <Image
+          src="/a-c-rDIPPwnnR54-unsplash.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover object-center"
+          sizes="100vw"
+        />
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a]/75 via-[#0a0a0a]/70 to-[#0a0a0a]" />
+
+        <div className="relative z-10 mx-auto max-w-4xl text-center">
+          <Image
+            src="/crate-logo.png"
+            alt="Crate"
+            width={400}
+            height={120}
+            priority
+            className="mx-auto mb-8 w-[200px] sm:w-[280px] md:w-[340px] h-auto drop-shadow-[0_0_24px_rgba(34,197,94,0.15)]"
+          />
+
+          <h1 className="font-[family-name:var(--font-playfair)] text-5xl font-normal leading-[1.1] tracking-[-0.02em] sm:text-7xl md:text-8xl mb-8">
+            The deepest way to
+            <br />
+            discover music.
+          </h1>
+
+          <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#b0b0b0] mb-12">
+            82 tools across 15 sources. Influence tracing powered by Harvard
+            research. A terminal-native agent that understands music the way
+            critics and collectors do.
+          </p>
+
+          <a
+            href="#get-started"
+            className="inline-block border border-[#e8a849] px-8 py-3 font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.2em] uppercase text-[#e8a849] transition-colors hover:bg-[#e8a849] hover:text-[#0a0a0a]"
+          >
+            Get Started
+          </a>
+        </div>
+
+        {/* Stats row */}
+        <div className="mx-auto mt-20 grid max-w-3xl grid-cols-3 gap-px border border-[#222]">
+          {[
+            { number: "82", label: "Tools" },
+            { number: "15", label: "Sources" },
+            { number: "26", label: "Publications" },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-[#141414] px-8 py-8 text-center"
+            >
+              <p className="font-[family-name:var(--font-playfair)] text-4xl sm:text-5xl mb-2">
+                {stat.number}
+              </p>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.25em] uppercase text-[#888]">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* About */}
+      <section id="about" className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-20 md:grid-cols-2">
+            <div>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+                What is Crate
+              </p>
+              <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+                An AI agent for
+                <br />
+                music obsessives.
+              </h2>
+              <p className="text-lg leading-relaxed text-[#888]">
+                Crate is a terminal-based AI agent that connects to 15 music
+                data sources — from MusicBrainz and Discogs to Bandcamp and
+                Genius — giving you research-grade access to the full landscape
+                of recorded music.
+              </p>
+            </div>
+            <div className="flex flex-col gap-8 border-l border-[#222] pl-12">
+              {[
+                {
+                  title: "Ask anything",
+                  desc: "Natural language queries across every source. Who played drums on that session? What are the vinyl pressings worth? Where are they touring next?",
+                },
+                {
+                  title: "Build playlists from verified data",
+                  desc: "Every track is verified against real databases — not hallucinated. Bandcamp, MusicBrainz, and YouTube confirm existence before inclusion.",
+                },
+                {
+                  title: "Trace influence networks",
+                  desc: "Discover how artists connect through shared reviews, collaborations, and critical co-mentions. Powered by methodology from Harvard Data Science Review.",
+                },
+                {
+                  title: "Listen right from the terminal",
+                  desc: "Built-in audio player streams tracks from YouTube and live radio from thousands of stations worldwide. Queue playlists, control playback, and discover new stations — without leaving the CLI.",
+                },
+              ].map((item) => (
+                <div key={item.title} className="py-4">
+                  <h3 className="font-[family-name:var(--font-playfair)] text-xl mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-[#888]">
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* Sources Grid */}
+      <section id="sources" className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+            Data Sources
+          </p>
+          <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-16">
+            15 sources. 82 tools.
+            <br />
+            One conversation.
+          </h2>
+
+          <div className="grid grid-cols-2 gap-px border border-[#222] sm:grid-cols-3 md:grid-cols-5">
+            {SOURCES.map((source) => (
+              <div
+                key={source.name}
+                className="source-card bg-[#141414] p-6 border border-transparent"
+              >
+                <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555] mb-3">
+                  {source.category}
+                </p>
+                <p className="font-[family-name:var(--font-playfair)] text-lg mb-1">
+                  {source.name}
+                </p>
+                <p className="font-[family-name:var(--font-geist-mono)] text-xs text-[#888]">
+                  {source.tools} tools
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* Tech Stack / How It Works */}
+      <section id="stack" className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 max-w-2xl">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+              How It Works
+            </p>
+            <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+              Built on the
+              <br />
+              Claude Agent SDK.
+            </h2>
+            <p className="text-lg leading-relaxed text-[#888]">
+              Crate uses Anthropic&apos;s Agent SDK to orchestrate multi-turn
+              research across all 15 sources. Claude decides which tools to call,
+              chains results together, and reasons through complex queries — all
+              in a single conversation loop.
+            </p>
+          </div>
+
+          {/* Architecture diagram */}
+          <div className="mb-20">
+            <div className="border border-[#222] bg-[#141414] p-4 sm:p-8">
+              <Image
+                src="/crate-architecture.png"
+                alt="Crate CLI architecture diagram showing the agent loop, MCP servers, external APIs, and local storage"
+                width={1380}
+                height={900}
+                className="w-full h-auto"
+              />
+            </div>
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.15em] uppercase text-[#555] mt-3">
+              Initial architecture diagram — some details have evolved since this was drawn.
+            </p>
+          </div>
+
+          {/* Stack grid */}
+          <div className="grid gap-px border border-[#222] sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                name: "Claude Agent SDK",
+                role: "Agent orchestration",
+                desc: "Agentic query loop with streaming, session resumption, multi-turn tool use, and cost tracking.",
+              },
+              {
+                name: "Model Context Protocol",
+                role: "Tool interface",
+                desc: "Each data source is an MCP server. Tools defined with Zod schemas, called by Claude at inference time.",
+              },
+              {
+                name: "pi-tui",
+                role: "Terminal UI",
+                desc: "Imperative terminal rendering with live Markdown streaming, editor input, and custom themes.",
+              },
+              {
+                name: "Zod",
+                role: "Schema validation",
+                desc: "Type-safe tool definitions ensure every MCP tool has validated inputs and outputs.",
+              },
+              {
+                name: "better-sqlite3",
+                role: "Local storage",
+                desc: "Collections, playlists, and the influence network cache persist locally in SQLite.",
+              },
+              {
+                name: "Cheerio",
+                role: "Web scraping",
+                desc: "Parses HTML from Wikipedia, Bandcamp, and other sources for structured data extraction.",
+              },
+              {
+                name: "Mem0",
+                role: "Long-term memory",
+                desc: "Optional persistent memory layer that remembers your music preferences across sessions.",
+              },
+              {
+                name: "yt-dlp + mpv",
+                role: "Audio playback",
+                desc: "Streams tracks from YouTube and internet radio directly in the terminal. No browser needed.",
+              },
+              {
+                name: "TypeScript",
+                role: "Language",
+                desc: "End-to-end type safety from tool schemas to agent responses. Strict mode, zero any.",
+              },
+            ].map((tech) => (
+              <div key={tech.name} className="bg-[#141414] p-8">
+                <p className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.1em] text-[#e8a849] mb-1">
+                  {tech.name}
+                </p>
+                <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.15em] uppercase text-[#666] mb-3">
+                  {tech.role}
+                </p>
+                <p className="text-sm leading-relaxed text-[#888]">
+                  {tech.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* Research / Influence */}
+      <section id="research" className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          {/* Header */}
+          <div className="mb-16 max-w-2xl">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+              Academic Foundation
+            </p>
+            <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+              Influence tracing,
+              <br />
+              grounded in research.
+            </h2>
+            <p className="text-lg leading-relaxed text-[#888] mb-8">
+              Crate&apos;s influence network is built on methodology from the{" "}
+              <em>Harvard Data Science Review</em> — extracting artist
+              connections from music criticism through co-mention analysis
+              across 26 publications.
+            </p>
+            <div className="border border-[#222] bg-[#0e0e0e] p-6">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#e8a849] mb-3">
+                The Paper
+              </p>
+              <p className="font-[family-name:var(--font-playfair)] text-xl leading-snug mb-2">
+                &ldquo;Modeling Artist Influence for Music Selection and
+                Recommendation: A Purely Network-Based Approach&rdquo;
+              </p>
+              <p className="text-sm text-[#888] mb-1">
+                Elena Badillo-Goicoechea · Harvard Data Science Review, Issue 7.4, Fall 2025
+              </p>
+              <p className="text-sm text-[#666] mb-4">
+                Proposes a recommendation system that builds a knowledge graph
+                from music review text — mapping artistic influence through
+                co-mentions in expert criticism rather than user behavior data.
+                The approach emulates exhaustively reading through linked
+                sequences of reviews, discovering new artists mentioned in each
+                piece.
+              </p>
+              <a
+                href="https://hdsr.mitpress.mit.edu/pub/t4txmd81/release/2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#e8a849] hover:text-[#d4963d] transition-colors"
+              >
+                Read the paper →
+              </a>
+            </div>
+          </div>
+
+          {/* Infographic */}
+          <div className="mb-20 border border-[#222] bg-[#141414] p-4 sm:p-8">
+            <img
+              src="/influence-infographic.jpg"
+              alt="Crate's Influence Network: Review-Driven Discovery — How it maps artistic influence from reviews, not just plays. Shows three features: Review-Driven Discovery (finding connections from 26 publications), Influence Tracing (building multi-hop paths between artists), and Influence Cache (local knowledge graph with BFS path-finding)."
+              className="w-full rounded-sm"
+            />
+            <p className="mt-4 font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555] text-center">
+              How Crate maps artistic influence from reviews — not streaming algorithms
+            </p>
+          </div>
+
+          {/* Demo CTA */}
+          <div className="mb-20 text-center">
+            <a
+              href="/influence-demo"
+              className="inline-flex items-center gap-3 border border-[#e8a849] px-8 py-4 font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.2em] uppercase text-[#e8a849] transition-all hover:bg-[#e8a849] hover:text-[#0a0a0a]"
+            >
+              See the interactive demo →
+            </a>
+            <p className="mt-3 font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.15em] uppercase text-[#555]">
+              Fela Kuti → Beyoncé — four influence paths, traced and cited
+            </p>
+          </div>
+
+          {/* Two-column: description + publications */}
+          <div className="grid gap-20 md:grid-cols-2">
+            <div>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+                How It Works
+              </p>
+              <div className="flex flex-col gap-6">
+                {[
+                  {
+                    step: "01",
+                    title: "Review-Driven Discovery",
+                    desc: "Searches 26 music publications for co-mentions and influence phrases. Distinguishes casual name-drops from explicit sonic lineage signals.",
+                  },
+                  {
+                    step: "02",
+                    title: "Influence Tracing",
+                    desc: "Builds multi-hop paths between artists — even distant ones. Finds bridge artists across genres using Exa neural search and Tavily keyword search.",
+                  },
+                  {
+                    step: "03",
+                    title: "Local Knowledge Graph",
+                    desc: "Every discovery is cached in a local SQLite graph database. BFS path-finding gives instant results. The graph grows stronger with every query.",
+                  },
+                ].map((item) => (
+                  <div key={item.step} className="border-l border-[#222] pl-6">
+                    <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#e8a849] mb-2">
+                      {item.step}
+                    </p>
+                    <h3 className="font-[family-name:var(--font-playfair)] text-xl mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-[#888]">
+                      {item.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+                26 Publications Indexed
+              </p>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                {PUBLICATIONS.map((pub) => (
+                  <p
+                    key={pub}
+                    className="border-b border-[#1a1a1a] py-2 font-[family-name:var(--font-geist-mono)] text-xs text-[#888]"
+                  >
+                    {pub}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* Demo placeholder */}
+      <section className="px-6 py-32">
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+            See it in action
+          </p>
+          <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-12">
+            Terminal-native.
+            <br />
+            Research-grade.
+          </h2>
+
+          {/* Terminal mockup */}
+          <div className="mx-auto max-w-2xl border border-[#222] bg-[#141414]">
+            <div className="flex items-center gap-2 border-b border-[#222] px-4 py-3">
+              <div className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+              <div className="h-3 w-3 rounded-full bg-[#febc2e]" />
+              <div className="h-3 w-3 rounded-full bg-[#28c840]" />
+              <span className="ml-3 font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-wider text-[#555]">
+                crate
+              </span>
+            </div>
+            <div className="p-6 text-left font-[family-name:var(--font-geist-mono)] text-sm leading-loose">
+              <p className="text-[#888]">
+                <span className="text-[#e8a849]">crate &gt;</span> trace the
+                influence path from Brian Eno to Aphex Twin
+              </p>
+              <p className="mt-4 text-[#555]">
+                Searching 26 publications for co-mentions...
+              </p>
+              <p className="text-[#555]">
+                Found direct connection via Pitchfork, The Wire
+              </p>
+              <p className="text-[#555]">
+                Extracting neighborhood (Exa neural search)...
+              </p>
+              <p className="mt-4 text-[#ededed]">
+                <span className="text-[#e8a849]">Brian Eno</span> →{" "}
+                <span className="text-[#e8a849]">Aphex Twin</span>
+              </p>
+              <p className="text-[#888]">
+                Confidence: 0.92 &middot; Sources: 7 reviews
+              </p>
+              <p className="text-[#555] mt-1">
+                Shared themes: ambient, generative, texture-first
+              </p>
+              <p className="mt-4 text-[#888]">
+                <span className="text-[#e8a849]">crate &gt;</span>{" "}
+                <span className="inline-block w-2 h-4 bg-[#ededed] animate-pulse" />
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* Getting Started */}
+      <section id="get-started" className="px-6 py-32">
+        <div className="mx-auto max-w-4xl">
+          <div className="text-center mb-20">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+              Getting Started
+            </p>
+            <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-6xl mb-4">
+              Start digging.
+            </h2>
+            <p className="mx-auto max-w-lg text-lg leading-relaxed text-[#888]">
+              Open source. MIT licensed. Three steps to your first session.
+            </p>
+          </div>
+
+          {/* Step 1: Install */}
+          <div className="mb-16">
+            <div className="flex items-baseline gap-4 mb-4">
+              <span className="font-[family-name:var(--font-playfair)] text-3xl text-[#e8a849]">1</span>
+              <h3 className="font-[family-name:var(--font-playfair)] text-2xl">Clone and install</h3>
+            </div>
+            <div className="border border-[#222] bg-[#141414] p-5 font-[family-name:var(--font-geist-mono)] text-sm leading-loose">
+              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">git clone https://github.com/tmoody1973/crate-cli.git</span></p>
+              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">cd crate-cli</span></p>
+              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">npm install</span></p>
+            </div>
+            <p className="text-sm text-[#555] mt-3">
+              Requires Node.js 20+ and an Anthropic API key.
+              For audio playback, install{" "}
+              <a href="https://mpv.io" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-[#ededed] transition-colors underline underline-offset-2">mpv</a>
+              {" "}and{" "}
+              <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-[#ededed] transition-colors underline underline-offset-2">yt-dlp</a>.
+            </p>
+          </div>
+
+          {/* Step 2: API Keys */}
+          <div className="mb-16">
+            <div className="flex items-baseline gap-4 mb-4">
+              <span className="font-[family-name:var(--font-playfair)] text-3xl text-[#e8a849]">2</span>
+              <h3 className="font-[family-name:var(--font-playfair)] text-2xl">Add your API keys</h3>
+            </div>
+            <div className="border border-[#222] bg-[#141414] p-5 font-[family-name:var(--font-geist-mono)] text-sm leading-loose mb-4">
+              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">cp .env.example .env</span></p>
+              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">$EDITOR .env</span></p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#222] border border-[#222]">
+              {[
+                { key: "ANTHROPIC_API_KEY", label: "Anthropic", note: "Required — powers the agent", url: "https://console.anthropic.com/", tag: "required" },
+                { key: "TAVILY_API_KEY", label: "Tavily", note: "Web search for influence tracing", url: "https://tavily.com/", tag: "recommended" },
+                { key: "LASTFM_API_KEY", label: "Last.fm", note: "Listening stats, similar artists", url: "https://www.last.fm/api/account/create", tag: "recommended" },
+                { key: "GENIUS_ACCESS_TOKEN", label: "Genius", note: "Lyrics, annotations, artist bios", url: "https://genius.com/api-clients", tag: "recommended" },
+                { key: "DISCOGS_KEY", label: "Discogs", note: "Vinyl catalog, labels, pressings", url: "https://www.discogs.com/settings/developers", tag: "optional" },
+                { key: "EXA_API_KEY", label: "Exa", note: "Neural semantic search", url: "https://exa.ai/", tag: "optional" },
+                { key: "YOUTUBE_API_KEY", label: "YouTube", note: "Improved search results", url: "https://console.cloud.google.com/apis", tag: "optional" },
+                { key: "TICKETMASTER_API_KEY", label: "Ticketmaster", note: "Concert and event discovery", url: "https://developer.ticketmaster.com/", tag: "optional" },
+              ].map((item) => (
+                <div key={item.key} className="bg-[#0e0e0e] p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-[family-name:var(--font-geist-mono)] text-xs text-[#ededed] hover:text-[#e8a849] transition-colors"
+                    >
+                      {item.label} &rarr;
+                    </a>
+                    <span className={`font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-wider uppercase ${
+                      item.tag === "required" ? "text-[#e8a849]" : item.tag === "recommended" ? "text-[#666]" : "text-[#444]"
+                    }`}>
+                      {item.tag}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#555]">{item.note}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-[#555] mt-3">
+              Only Anthropic is required. Each additional key unlocks more data sources.
+              Free tiers are available for most services.
+            </p>
+          </div>
+
+          {/* Step 3: Run */}
+          <div className="mb-16">
+            <div className="flex items-baseline gap-4 mb-4">
+              <span className="font-[family-name:var(--font-playfair)] text-3xl text-[#e8a849]">3</span>
+              <h3 className="font-[family-name:var(--font-playfair)] text-2xl">Start a session</h3>
+            </div>
+            <div className="border border-[#222] bg-[#141414] p-5 font-[family-name:var(--font-geist-mono)] text-sm leading-loose">
+              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">npm run dev</span></p>
+            </div>
+            <p className="text-sm text-[#555] mt-3">
+              Use <span className="font-[family-name:var(--font-geist-mono)] text-[#888]">npm run dev:opus</span> for deep research
+              or <span className="font-[family-name:var(--font-geist-mono)] text-[#888]">npm run dev:haiku</span> for quick lookups.
+            </p>
+          </div>
+
+          {/* Try these prompts */}
+          <div className="mb-20">
+            <h3 className="font-[family-name:var(--font-playfair)] text-xl mb-6">Things to try</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                "What are the rarest vinyl pressings of MF DOOM albums?",
+                "Trace the influence path from Fela Kuti to Beyoncé",
+                "Play something that sounds like Boards of Canada",
+                "Find me a jazz radio station from Japan",
+                "Who played on every track of Blonde by Frank Ocean?",
+                "Build a playlist of ambient albums from the last 5 years",
+              ].map((prompt) => (
+                <div
+                  key={prompt}
+                  className="border border-[#222] bg-[#141414] px-4 py-3 font-[family-name:var(--font-geist-mono)] text-xs text-[#888] leading-relaxed"
+                >
+                  <span className="text-[#e8a849]">crate &gt;</span> {prompt}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA buttons */}
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <a
+              href="https://github.com/tmoody1973/crate-cli"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 border border-[#ededed] bg-[#ededed] px-8 py-4 font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#0a0a0a] transition-all hover:bg-transparent hover:text-[#ededed]"
+            >
+              View on GitHub
+            </a>
+            <a
+              href="https://github.com/tmoody1973/crate-cli#quick-start"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 border border-[#222] px-8 py-4 font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-all hover:border-[#ededed] hover:text-[#ededed]"
+            >
+              Read the Docs
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-[#222] px-6 py-12">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555]">
+            Crate CLI &middot; MIT License
+          </p>
+          <div className="flex gap-8">
+            <a
+              href="https://github.com/tmoody1973/crate-cli"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555] transition-colors hover:text-[#ededed]"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

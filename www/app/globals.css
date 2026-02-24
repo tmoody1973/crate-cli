@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #0a0a0a;
+  --color-foreground: #ededed;
+  --color-accent: #e8a849;
+  --color-accent-hover: #d4963d;
+  --color-muted: #888;
+  --color-surface: #141414;
+  --color-border: #222;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-playfair);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* Tokyo Record Bar-inspired typography utilities */
+.label-caps {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.heading-serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* Install command copy button */
+.copy-btn {
+  transition: all 0.2s ease;
+}
+.copy-btn:hover {
+  color: var(--color-accent);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom selection */
+::selection {
+  background: var(--color-accent);
+  color: #0a0a0a;
+}
+
+/* Divider styling */
+.divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* Source grid hover */
+.source-card {
+  transition: all 0.3s ease;
+}
+.source-card:hover {
+  border-color: var(--color-accent);
+}
+
+/* Stat counter animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.stat-animate {
+  animation: countUp 0.6s ease-out forwards;
+}
