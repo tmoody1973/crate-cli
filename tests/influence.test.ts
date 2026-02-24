@@ -5,17 +5,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Mock the web-search module so influence handlers don't make real API calls
 // ---------------------------------------------------------------------------
 
-const { mockSearchWeb, mockExtractContent, mockFindSimilar, mockHasExa } = vi.hoisted(() => ({
+const { mockSearchWeb, mockExtractContent, mockFindSimilar, mockHasExa, mockEnrichMetadata } = vi.hoisted(() => ({
   mockSearchWeb: vi.fn(),
   mockExtractContent: vi.fn(),
   mockFindSimilar: vi.fn(),
   mockHasExa: vi.fn(() => false),
+  mockEnrichMetadata: vi.fn(async (results: any[]) => results),
 }));
 
 vi.mock("../src/servers/web-search.js", () => ({
   searchWebHandler: mockSearchWeb,
   extractContentHandler: mockExtractContent,
   findSimilarHandler: mockFindSimilar,
+  enrichArticleMetadata: mockEnrichMetadata,
   hasTavily: () => true,
   hasExa: mockHasExa,
 }));
@@ -899,5 +901,67 @@ describe("findBridgeArtistsHandler", () => {
     // Second and third = genre A and B (tavily)
     expect(calls[1][0].provider).toBe("tavily");
     expect(calls[2][0].provider).toBe("tavily");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// enrichArticleMetadata integration — verify it's called by handlers
+// ---------------------------------------------------------------------------
+
+describe("enrichArticleMetadata integration", () => {
+  beforeEach(() => {
+    mockSearchWeb.mockReset();
+    mockExtractContent.mockReset();
+    mockEnrichMetadata.mockClear();
+  });
+
+  it("searchReviewsHandler calls enrichArticleMetadata", async () => {
+    mockSearchWeb.mockResolvedValue(
+      webResult({
+        results: [
+          { title: "Review", url: "https://pitchfork.com/review/1", content: "Great album." },
+        ],
+      }),
+    );
+
+    await searchReviewsHandler({ artist: "Radiohead", max_results: 5, include_text: false });
+    expect(mockEnrichMetadata).toHaveBeenCalledTimes(1);
+    expect(mockEnrichMetadata.mock.calls[0][0]).toHaveLength(1);
+  });
+
+  it("traceInfluencePathHandler calls enrichArticleMetadata for direct match", async () => {
+    mockSearchWeb.mockResolvedValue(
+      webResult({
+        results: [
+          {
+            title: "Connection",
+            url: "https://pitchfork.com/review/2",
+            content: "Kraftwerk influenced Depeche Mode through electronic pop.",
+          },
+        ],
+      }),
+    );
+
+    await traceInfluencePathHandler({
+      from_artist: "Kraftwerk",
+      to_artist: "Depeche Mode",
+      max_depth: 1,
+    });
+
+    expect(mockEnrichMetadata).toHaveBeenCalled();
+  });
+
+  it("findBridgeArtistsHandler calls enrichArticleMetadata 3 times (search + genre A + genre B)", async () => {
+    mockSearchWeb.mockResolvedValue(
+      webResult({
+        results: [
+          { title: "Bridge", url: "https://example.com", content: "some text" },
+        ],
+      }),
+    );
+
+    await findBridgeArtistsHandler({ genre_a: "jazz", genre_b: "hip-hop", limit: 5 });
+    // 3 calls: one for crossover search, one for genre A, one for genre B
+    expect(mockEnrichMetadata).toHaveBeenCalledTimes(3);
   });
 });

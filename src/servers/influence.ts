@@ -18,6 +18,7 @@ import {
   searchWebHandler,
   extractContentHandler,
   findSimilarHandler,
+  enrichArticleMetadata,
   hasTavily,
   hasExa,
 } from "./web-search.js";
@@ -284,6 +285,9 @@ export async function searchReviewsHandler(args: {
       }
     }
 
+    // Enrich Tavily results with author/date from HTML meta tags
+    reviews = await enrichArticleMetadata(reviews);
+
     return toolResult({
       artist,
       album: album ?? null,
@@ -387,8 +391,8 @@ export async function traceInfluencePathHandler(args: {
       directContent.toLowerCase().includes(from_artist.toLowerCase()) &&
       directContent.toLowerCase().includes(to_artist.toLowerCase())
     ) {
-      // Direct connection found
-      const directResults = directData.results ?? [];
+      // Direct connection found — enrich with author/date metadata
+      const directResults = await enrichArticleMetadata(directData.results ?? []);
       const evidence = directResults
         .slice(0, 1)
         .map((r: any) => `${extractDomain(r.url)}: "${truncate(r.content ?? "", 100)}"`)
@@ -465,8 +469,11 @@ export async function traceInfluencePathHandler(args: {
           (m) => m.name.toLowerCase() === bridge.name.toLowerCase(),
         );
 
-        const fromSources = extractCitations(fromData.results ?? []);
-        const toSources = extractCitations(toData.results ?? []);
+        // Enrich neighborhood results with author/date metadata
+        const enrichedFrom = await enrichArticleMetadata(fromData.results ?? []);
+        const enrichedTo = await enrichArticleMetadata(toData.results ?? []);
+        const fromSources = extractCitations(enrichedFrom);
+        const toSources = extractCitations(enrichedTo);
         const allSources = [...fromSources, ...toSources];
 
         path.push(
@@ -579,11 +586,16 @@ export async function findBridgeArtistsHandler(args: {
     const genreANames = new Set(genreAMentions.map((m) => m.name.toLowerCase()));
     const genreBOverlap = genreBMentions.filter((m) => genreANames.has(m.name.toLowerCase()));
 
-    // Collect all source citations
+    // Enrich all results with author/date metadata, then collect citations
+    const [enrichedSearch, enrichedGenreA, enrichedGenreB] = await Promise.all([
+      enrichArticleMetadata(searchData.results ?? []),
+      enrichArticleMetadata(genreAData.results ?? []),
+      enrichArticleMetadata(genreBData.results ?? []),
+    ]);
     const allCitations = [
-      ...extractCitations(searchData.results ?? []),
-      ...extractCitations(genreAData.results ?? []),
-      ...extractCitations(genreBData.results ?? []),
+      ...extractCitations(enrichedSearch),
+      ...extractCitations(enrichedGenreA),
+      ...extractCitations(enrichedGenreB),
     ];
 
     // Combine crossover mentions with direct bridge search mentions

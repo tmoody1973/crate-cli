@@ -317,6 +317,168 @@ export async function extractContentHandler(args: {
 }
 
 // ---------------------------------------------------------------------------
+// Article metadata enrichment (HTML <head> parsing)
+// ---------------------------------------------------------------------------
+
+const META_FETCH_TIMEOUT_MS = 5_000;
+
+/** Extract a <meta> tag's content attribute by name or property */
+function getMetaContent(html: string, attr: string, value: string): string | undefined {
+  // Meta attributes can appear in either order
+  const patterns = [
+    new RegExp(`<meta\\s+${attr}=["']${value}["']\\s+content=["']([^"']+)["']`, "i"),
+    new RegExp(`<meta\\s+content=["']([^"']+)["']\\s+${attr}=["']${value}["']`, "i"),
+  ];
+  for (const p of patterns) {
+    const m = html.match(p);
+    if (m?.[1]) return m[1].trim();
+  }
+  return undefined;
+}
+
+/**
+ * Parse author and published_date from HTML meta tags and JSON-LD.
+ * Checks (in priority order):
+ *   Author:  meta[name=author] → meta[property=article:author] → JSON-LD
+ *   Date:    meta[property=article:published_time] → meta[name=date] → JSON-LD
+ */
+export function parseArticleMetadata(html: string): {
+  author?: string;
+  published_date?: string;
+} {
+  const result: { author?: string; published_date?: string } = {};
+
+  // --- Author ---
+  // 1. <meta name="author">
+  result.author = getMetaContent(html, "name", "author");
+
+  // 2. <meta property="article:author"> (skip if it's a URL, e.g. Guardian profile links)
+  if (!result.author) {
+    const ogAuthor = getMetaContent(html, "property", "article:author");
+    if (ogAuthor && !ogAuthor.startsWith("http")) {
+      result.author = ogAuthor;
+    }
+  }
+
+  // --- Published date ---
+  // 1. <meta property="article:published_time">
+  result.published_date = getMetaContent(html, "property", "article:published_time");
+
+  // 2. <meta name="date"> or <meta name="publish-date">
+  if (!result.published_date) {
+    result.published_date =
+      getMetaContent(html, "name", "date") ??
+      getMetaContent(html, "name", "publish-date") ??
+      getMetaContent(html, "name", "publication-date");
+  }
+
+  // --- JSON-LD fallback for both ---
+  if (!result.author || !result.published_date) {
+    const jsonLdBlocks = [
+      ...html.matchAll(
+        /<script\s+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+      ),
+    ];
+    for (const block of jsonLdBlocks) {
+      if (result.author && result.published_date) break;
+      try {
+        let ld = JSON.parse(block[1]!);
+        if (Array.isArray(ld)) ld = ld[0];
+        // Handle @graph (common in WordPress, Pitchfork, etc.)
+        if (ld?.["@graph"]) {
+          ld =
+            ld["@graph"].find(
+              (item: any) =>
+                item["@type"] === "Article" ||
+                item["@type"] === "NewsArticle" ||
+                item["@type"] === "Review" ||
+                item["@type"] === "MusicAlbum",
+            ) ?? ld["@graph"][0];
+        }
+
+        if (!result.author && ld?.author) {
+          const a = ld.author;
+          if (typeof a === "string") result.author = a;
+          else if (Array.isArray(a)) result.author = a[0]?.name ?? undefined;
+          else if (a?.name) result.author = a.name;
+        }
+
+        if (!result.published_date) {
+          result.published_date =
+            ld?.datePublished ?? ld?.dateCreated ?? undefined;
+        }
+      } catch {
+        // Malformed JSON-LD — skip
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Enrich web search results with author and published_date by fetching
+ * each article's HTML <head> and parsing meta tags / JSON-LD.
+ *
+ * - Only fetches URLs where author or published_date is missing
+ * - 5s timeout per URL, best-effort (failures silently skipped)
+ * - Caps at 10 URLs to limit latency
+ */
+export async function enrichArticleMetadata<
+  T extends Record<string, any> & { url: string },
+>(results: T[]): Promise<T[]> {
+  const needsEnrichment = results.filter(
+    (r) => r.url && (!r.author || !r.published_date),
+  );
+
+  if (needsEnrichment.length === 0) return results;
+
+  // Cap parallel fetches to avoid excess latency
+  const toEnrich = needsEnrichment.slice(0, 10);
+
+  const fetches = toEnrich.map(async (r) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), META_FETCH_TIMEOUT_MS);
+    try {
+      const resp = await fetch(r.url, {
+        signal: controller.signal,
+        headers: { "User-Agent": "CrateCLI/1.0 (music-research-agent)" },
+        redirect: "follow",
+      });
+      if (!resp.ok) return { url: r.url, meta: {} as ReturnType<typeof parseArticleMetadata> };
+      // Cap at 50KB to avoid processing huge pages
+      const html = (await resp.text()).slice(0, 50_000);
+      return { url: r.url, meta: parseArticleMetadata(html) };
+    } catch {
+      return { url: r.url, meta: {} as ReturnType<typeof parseArticleMetadata> };
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+
+  const settled = await Promise.allSettled(fetches);
+
+  // Build url → metadata map
+  const metaMap = new Map<string, ReturnType<typeof parseArticleMetadata>>();
+  for (const s of settled) {
+    if (s.status === "fulfilled" && s.value.url) {
+      metaMap.set(s.value.url, s.value.meta);
+    }
+  }
+
+  // Merge enriched metadata into results (only fill missing fields)
+  return results.map((r) => {
+    const meta = metaMap.get(r.url);
+    if (!meta) return r;
+    return {
+      ...r,
+      author: r.author || meta.author || undefined,
+      published_date: r.published_date || meta.published_date || undefined,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Tool definitions
 // ---------------------------------------------------------------------------
 
