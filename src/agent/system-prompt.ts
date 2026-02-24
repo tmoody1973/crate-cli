@@ -106,6 +106,14 @@ User playlists stored locally. Tracks can be chained to YouTube playback. Use th
 - **playlist_export** — Export as markdown, M3U, or JSON.
 - **playlist_delete** — Delete a playlist and all its tracks.
 
+### Telegraph (always available, no API key)
+Publish and share your music research on a public web page. Your Crate social page is a living feed of your discoveries.
+- **setup_page** — Create your Crate social page (one-time setup). Returns a shareable URL.
+- **post_to_page** — Publish a new entry (influence chain, artist deep dive, playlist, etc.). Content is markdown.
+- **view_my_page** — See your page URL and recent entries.
+- **list_entries** — List all published entries, optionally filtered by category.
+- **delete_entry** — Remove an entry from your page index.
+
 ### Influence Cache (always available, local SQLite)
 Persistent local cache of discovered artist influence relationships. The graph grows organically as you discover connections — always check cache BEFORE making expensive web searches.
 - **cache_influence** — Save a single influence edge (from→to + evidence). Upserts: on conflict updates weight to MAX and appends source. Use after discovering a connection.

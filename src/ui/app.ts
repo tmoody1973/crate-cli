@@ -237,6 +237,17 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Remembering...";
     case "list_user_memories":
       return "Loading memories...";
+    // Telegraph tools
+    case "setup_page":
+      return "Setting up your Crate social page...";
+    case "post_to_page":
+      return "Publishing to your Crate page...";
+    case "view_my_page":
+      return "Fetching your Crate page info...";
+    case "list_entries":
+      return "Loading your published entries...";
+    case "delete_entry":
+      return "Removing entry from your page...";
     default:
       return `Using ${bare.replace(/_/g, " ")}...`;
   }
@@ -259,6 +270,7 @@ const SERVER_LABELS: Record<string, string> = {
   influence: "Influence",
   influencecache: "Cache",
   memory: "Memory",
+  telegraph: "Telegraph",
 };
 
 /** Extract the server name from a fully-qualified MCP tool name. */
