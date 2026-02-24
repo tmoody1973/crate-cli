@@ -90,6 +90,12 @@ export default function Home() {
               Research
             </a>
             <a
+              href="/how-it-works"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#e8a849] transition-colors hover:text-[#d4963d]"
+            >
+              How It Works
+            </a>
+            <a
               href="/influence-demo"
               className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#e8a849] transition-colors hover:text-[#d4963d]"
             >
