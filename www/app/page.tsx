@@ -18,6 +18,7 @@ const SOURCES = [
   { name: "Influence", tools: 3, category: "Research" },
   { name: "Influence Cache", tools: 8, category: "Network" },
   { name: "Memory", tools: 3, category: "Personal" },
+  { name: "Telegraph", tools: 5, category: "Publishing" },
 ];
 
 const PUBLICATIONS = [
@@ -70,6 +71,12 @@ export default function Home() {
               className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
             >
               Why Crate
+            </a>
+            <a
+              href="#share"
+              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Share
             </a>
             <a
               href="#sources"
@@ -150,7 +157,7 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#b0b0b0] mb-12">
-            82 tools across 15 sources. Influence tracing powered by Harvard
+            87 tools across 16 sources. Influence tracing powered by Harvard
             research. A terminal-native agent that understands music the way
             critics and collectors do.
           </p>
@@ -166,8 +173,8 @@ export default function Home() {
         {/* Stats row */}
         <div className="mx-auto mt-20 grid max-w-3xl grid-cols-3 gap-px border border-[#222]">
           {[
-            { number: "82", label: "Tools" },
-            { number: "15", label: "Sources" },
+            { number: "87", label: "Tools" },
+            { number: "16", label: "Sources" },
             { number: "26", label: "Publications" },
           ].map((stat) => (
             <div
@@ -199,7 +206,7 @@ export default function Home() {
                 music obsessives.
               </h2>
               <p className="text-lg leading-relaxed text-[#888]">
-                Crate is a terminal-based AI agent that connects to 15 music
+                Crate is a terminal-based AI agent that connects to 16 music
                 data sources — from MusicBrainz and Discogs to Bandcamp and
                 Genius — giving you research-grade access to the full landscape
                 of recorded music.
@@ -222,6 +229,10 @@ export default function Home() {
                 {
                   title: "Listen right from the terminal",
                   desc: "Built-in audio player streams tracks from YouTube and live radio from thousands of stations worldwide. Queue playlists, control playback, and discover new stations — without leaving the CLI.",
+                },
+                {
+                  title: "Share your discoveries",
+                  desc: "Publish influence chains, artist deep dives, and playlists to a public web page — instantly shareable with anyone. No account required.",
                 },
               ].map((item) => (
                 <div key={item.title} className="py-4">
@@ -358,6 +369,137 @@ export default function Home() {
         <div className="divider" />
       </div>
 
+      {/* Crate Social — Telegraph Publishing */}
+      <section id="share" className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-20 md:grid-cols-2">
+            <div>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+                Crate Social
+              </p>
+              <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+                Publish your finds.
+                <br />
+                Share with anyone.
+              </h2>
+              <p className="text-lg leading-relaxed text-[#888] mb-8">
+                Every influence chain, artist deep dive, and playlist you research
+                can become a public web page — instantly shareable via a simple link.
+                No account, no API key, no setup beyond one command.
+              </p>
+              <p className="text-lg leading-relaxed text-[#888]">
+                Built on{" "}
+                <a
+                  href="https://telegra.ph"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#e8a849] hover:text-[#d4963d] transition-colors"
+                >
+                  Telegraph
+                </a>
+                {" "}— Telegram&apos;s anonymous publishing platform. Zero friction,
+                free forever.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              {/* How it works steps */}
+              {[
+                {
+                  step: "01",
+                  title: "Set up your page",
+                  desc: "One command creates your Crate social page — a living index of everything you publish. You get a shareable URL instantly.",
+                  prompt: "Set up my Crate page",
+                },
+                {
+                  step: "02",
+                  title: "Publish anything",
+                  desc: "Post influence chains, artist deep dives, playlist notes, or collection highlights. Each entry gets its own page, linked from your index.",
+                  prompt: "Post my Pharoah Sanders influence chain to my page",
+                },
+                {
+                  step: "03",
+                  title: "Share the link",
+                  desc: "Your index page is a public feed of your music discoveries. Send it to friends, drop it in Discord, or pin it in your bio.",
+                  prompt: "Show me my Crate page",
+                },
+              ].map((item) => (
+                <div key={item.step} className="border-l border-[#222] pl-6">
+                  <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#e8a849] mb-2">
+                    {item.step}
+                  </p>
+                  <h3 className="font-[family-name:var(--font-playfair)] text-xl mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-[#888] mb-3">
+                    {item.desc}
+                  </p>
+                  <p className="font-[family-name:var(--font-geist-mono)] text-xs text-[#555]">
+                    <span className="text-[#e8a849]">crate &gt;</span> {item.prompt}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Terminal demo */}
+          <div className="mt-20 mx-auto max-w-3xl border border-[#222] bg-[#141414]">
+            <div className="flex items-center gap-2 border-b border-[#222] px-4 py-3">
+              <div className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+              <div className="h-3 w-3 rounded-full bg-[#febc2e]" />
+              <div className="h-3 w-3 rounded-full bg-[#28c840]" />
+              <span className="ml-3 font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-wider text-[#555]">
+                crate
+              </span>
+            </div>
+            <div className="p-6 text-left font-[family-name:var(--font-geist-mono)] text-sm leading-loose">
+              <p className="text-[#888]">
+                <span className="text-[#e8a849]">crate &gt;</span> set up my Crate page as &quot;Maya&apos;s Digs&quot;
+              </p>
+              <p className="mt-3 text-[#555]">Setting up your Crate social page...</p>
+              <p className="text-[#ededed]">
+                Page created: <span className="text-[#e8a849]">https://telegra.ph/Mayas-Digs-02-24</span>
+              </p>
+              <p className="mt-4 text-[#888]">
+                <span className="text-[#e8a849]">crate &gt;</span> post my Pharoah Sanders to Floating Points influence chain to my page
+              </p>
+              <p className="mt-3 text-[#555]">Publishing to your Crate page...</p>
+              <p className="text-[#ededed]">
+                Published: <span className="text-[#e8a849]">https://telegra.ph/Pharoah-Sanders-to-Floating-Points-02-24</span>
+              </p>
+              <p className="text-[#555]">Index updated with 1 entry</p>
+              <p className="mt-4 text-[#888]">
+                <span className="text-[#e8a849]">crate &gt;</span>{" "}
+                <span className="inline-block w-2 h-4 bg-[#ededed] animate-pulse" />
+              </p>
+            </div>
+          </div>
+
+          {/* Feature tags */}
+          <div className="mt-12 flex flex-wrap justify-center gap-3">
+            {[
+              "No API key needed",
+              "Zero signup",
+              "Instant URLs",
+              "Markdown support",
+              "Auto-indexed",
+              "Categories & filtering",
+            ].map((tag) => (
+              <span
+                key={tag}
+                className="border border-[#222] bg-[#0e0e0e] px-4 py-2 font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.15em] uppercase text-[#888]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
       {/* Sources Grid */}
       <section id="sources" className="px-6 py-32">
         <div className="mx-auto max-w-6xl">
@@ -365,7 +507,7 @@ export default function Home() {
             Data Sources
           </p>
           <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-16">
-            15 sources. 82 tools.
+            16 sources. 87 tools.
             <br />
             One conversation.
           </h2>
@@ -473,6 +615,11 @@ export default function Home() {
                 name: "yt-dlp + mpv",
                 role: "Audio playback",
                 desc: "Streams tracks from YouTube and internet radio directly in the terminal. No browser needed.",
+              },
+              {
+                name: "Telegraph API",
+                role: "Publishing",
+                desc: "Anonymous, zero-friction publishing via Telegram's Telegraph platform. No API key, no account — instant shareable pages.",
               },
               {
                 name: "TypeScript",
@@ -803,6 +950,7 @@ export default function Home() {
                 "Find me a jazz radio station from Japan",
                 "Who played on every track of Blonde by Frank Ocean?",
                 "Build a playlist of ambient albums from the last 5 years",
+                "Set up my Crate page and post my latest influence chain",
               ].map((prompt) => (
                 <div
                   key={prompt}
