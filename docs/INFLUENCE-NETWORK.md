@@ -32,7 +32,7 @@ Crate implements this methodology through three layers:
 
 | Layer | Purpose | Speed | Data Source |
 |-------|---------|-------|-------------|
-| **Review-Driven Discovery** | Extract co-mentions from real music criticism | Seconds (web search) | 23 music publications |
+| **Review-Driven Discovery** | Extract co-mentions from real music criticism | Seconds (web search) | 26 music publications |
 | **Influence Tracing** | Build multi-hop paths between artists | 5–20 seconds | Tavily + Exa neural search + co-mention extraction |
 | **Influence Cache** | Persist and query discovered connections | Instant (local SQLite) | Previously discovered edges |
 
@@ -42,9 +42,9 @@ Crate implements this methodology through three layers:
 
 ### What It Does
 
-Review-Driven Discovery searches 23 music publications for album reviews using Tavily's advanced search depth for richer snippets. When Exa is available and initial results are sparse, it automatically discovers additional related reviews via semantic similarity (`findSimilar`). Full review text is extracted via Tavily for deeper co-mention analysis.
+Review-Driven Discovery searches 26 music publications for album reviews using Tavily's advanced search depth for richer snippets. When Exa is available and initial results are sparse, it automatically discovers additional related reviews via semantic similarity (`findSimilar`). Full review text is extracted via Tavily for deeper co-mention analysis.
 
-### The 23 Publication Sources
+### The 26 Publication Sources
 
 | Publication | Domain | Known For |
 |-------------|--------|-----------|
@@ -71,6 +71,9 @@ Review-Driven Discovery searches 23 music publications for album reviews using T
 | Passion of the Weiss | passionweiss.com | Hip-hop criticism |
 | The Vinyl District | thevinyldistrict.com | Physical media community |
 | New York Times | nytimes.com | Cultural criticism, mainstream crossover |
+| Paste Magazine | pastemagazine.com | Indie, folk, Americana, album reviews |
+| Exclaim! | exclaim.ca | Canadian music, punk, metal, electronic |
+| PopMatters | popmatters.com | Pop culture criticism, album reviews |
 
 ### How the Co-Mention Extraction Works
 
@@ -100,7 +103,7 @@ The `extractArtistMentions()` algorithm processes review text in five stages:
 
 | Tool | Description |
 |------|-------------|
-| `search_reviews` | Search 23 music publications for album/artist reviews using Tavily advanced depth. When Exa is available and results are sparse, discovers additional reviews via semantic similarity. Optionally extract full review text for deeper analysis. |
+| `search_reviews` | Search 26 music publications for album/artist reviews using Tavily advanced depth. When Exa is available and results are sparse, discovers additional reviews via semantic similarity. Optionally extract full review text for deeper analysis. |
 | `extract_influences` | Feed review text (or a URL) through the co-mention extraction algorithm. Returns ranked artist mentions with context snippets and influence indicators. |
 
 ### Example Prompts
@@ -414,7 +417,7 @@ When you ask an influence question, Crate follows this priority order:
    └── Results → cache_influence (relationship: "sample")
         │
 5. Influence Tools (search_reviews, extract_influences)
-   └── Review-driven co-mention extraction from 23 publications.
+   └── Review-driven co-mention extraction from 26 publications.
    └── Exa semantic discovery enriches sparse results.
    └── Results → cache_batch_influences
         │

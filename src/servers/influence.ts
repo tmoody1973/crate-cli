@@ -53,6 +53,9 @@ export const REVIEW_DOMAINS = [
   "passionweiss.com",
   "thevinyldistrict.com",
   "nytimes.com",
+  "pastemagazine.com",
+  "exclaim.ca",
+  "popmatters.com",
 ] as const;
 
 // ---------------------------------------------------------------------------
