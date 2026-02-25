@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 
 const SOURCES = [
   { name: "MusicBrainz", tools: 6, category: "Metadata" },
@@ -52,6 +53,22 @@ const PUBLICATIONS = [
 ];
 
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { href: "#about", label: "About" },
+    { href: "#why-crate", label: "Why Crate" },
+    { href: "#share", label: "Share" },
+    { href: "#sources", label: "Sources" },
+    { href: "#stack", label: "Stack" },
+    { href: "#research", label: "Research" },
+  ];
+
+  const navHighlightLinks = [
+    { href: "/how-it-works", label: "How It Works" },
+    { href: "/influence-demo", label: "Demo" },
+  ];
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
       {/* Nav */}
@@ -60,55 +77,27 @@ export default function Home() {
           <span className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.25em] uppercase text-[#888]">
             Crate
           </span>
-          <div className="flex items-center gap-8">
-            <a
-              href="#about"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
-            >
-              About
-            </a>
-            <a
-              href="#why-crate"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
-            >
-              Why Crate
-            </a>
-            <a
-              href="#share"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
-            >
-              Share
-            </a>
-            <a
-              href="#sources"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
-            >
-              Sources
-            </a>
-            <a
-              href="#stack"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
-            >
-              Stack
-            </a>
-            <a
-              href="#research"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
-            >
-              Research
-            </a>
-            <a
-              href="/how-it-works"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#e8a849] transition-colors hover:text-[#d4963d]"
-            >
-              How It Works
-            </a>
-            <a
-              href="/influence-demo"
-              className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#e8a849] transition-colors hover:text-[#d4963d]"
-            >
-              Demo
-            </a>
+
+          {/* Desktop nav */}
+          <div className="hidden lg:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+              >
+                {link.label}
+              </a>
+            ))}
+            {navHighlightLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#e8a849] transition-colors hover:text-[#d4963d]"
+              >
+                {link.label}
+              </a>
+            ))}
             <a
               href="#get-started"
               className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
@@ -123,6 +112,66 @@ export default function Home() {
             >
               GitHub
             </a>
+          </div>
+
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden flex flex-col gap-1.5 p-2"
+            aria-label="Toggle menu"
+          >
+            <span className={`block h-px w-5 bg-[#888] transition-all duration-300 ${mobileMenuOpen ? "translate-y-[3.5px] rotate-45" : ""}`} />
+            <span className={`block h-px w-5 bg-[#888] transition-all duration-300 ${mobileMenuOpen ? "opacity-0" : ""}`} />
+            <span className={`block h-px w-5 bg-[#888] transition-all duration-300 ${mobileMenuOpen ? "-translate-y-[3.5px] -rotate-45" : ""}`} />
+          </button>
+        </div>
+
+        {/* Mobile menu */}
+        <div
+          className={`lg:hidden border-t border-[#222] bg-[#0a0a0a]/95 backdrop-blur-md overflow-hidden transition-all duration-300 ${
+            mobileMenuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col gap-4">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="font-[family-name:var(--font-geist-mono)] text-sm tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+              >
+                {link.label}
+              </a>
+            ))}
+            <div className="border-t border-[#222] pt-4 flex flex-col gap-4">
+              {navHighlightLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-[family-name:var(--font-geist-mono)] text-sm tracking-[0.15em] uppercase text-[#e8a849] transition-colors hover:text-[#d4963d]"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+            <div className="border-t border-[#222] pt-4 flex flex-col gap-4">
+              <a
+                href="#get-started"
+                onClick={() => setMobileMenuOpen(false)}
+                className="font-[family-name:var(--font-geist-mono)] text-sm tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+              >
+                Install
+              </a>
+              <a
+                href="https://github.com/tmoody1973/crate-cli"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-[family-name:var(--font-geist-mono)] text-sm tracking-[0.15em] uppercase text-[#888] transition-colors hover:text-[#ededed]"
+              >
+                GitHub
+              </a>
+            </div>
           </div>
         </div>
       </nav>
@@ -151,7 +200,7 @@ export default function Home() {
             className="mx-auto mb-8 w-[200px] sm:w-[280px] md:w-[340px] h-auto drop-shadow-[0_0_24px_rgba(34,197,94,0.15)]"
           />
 
-          <h1 className="font-[family-name:var(--font-playfair)] text-5xl font-normal leading-[1.1] tracking-[-0.02em] sm:text-7xl md:text-8xl mb-8">
+          <h1 className="font-[family-name:var(--font-playfair)] text-4xl font-normal leading-[1.1] tracking-[-0.02em] sm:text-6xl md:text-7xl lg:text-8xl mb-8">
             The most powerful AI
             <br />
             agent for music.
@@ -187,7 +236,7 @@ export default function Home() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="bg-[#141414] px-8 py-8 text-center"
+              className="bg-[#141414] px-4 py-6 sm:px-8 sm:py-8 text-center"
             >
               <p className="font-[family-name:var(--font-playfair)] text-4xl sm:text-5xl mb-2">
                 {stat.number}
@@ -221,7 +270,7 @@ export default function Home() {
                 conversation.
               </p>
             </div>
-            <div className="flex flex-col gap-8 border-l border-[#222] pl-12">
+            <div className="flex flex-col gap-8 md:border-l border-[#222] md:pl-12">
               {[
                 {
                   title: "Ask anything",
@@ -323,7 +372,7 @@ export default function Home() {
             </div>
 
             {/* Crate column */}
-            <div className="bg-[#0e0e0e] p-8 sm:p-10 border-l border-[#222]">
+            <div className="bg-[#0e0e0e] p-8 sm:p-10 md:border-l border-[#222]">
               <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#e8a849] mb-6">
                 Crate
               </p>
@@ -517,7 +566,7 @@ export default function Home() {
             </div>
 
             {/* Crate column */}
-            <div className="bg-[#0e0e0e] p-8 sm:p-10 border-l border-[#222]">
+            <div className="bg-[#0e0e0e] p-8 sm:p-10 md:border-l border-[#222]">
               <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#e8a849] mb-6">
                 Crate
               </p>
@@ -1097,13 +1146,13 @@ export default function Home() {
                 <span className="text-[#ededed]">npx crate-cli</span>
               </p>
             </div>
-            <div className="border border-[#222] bg-[#141414] p-5">
+            <div className="border border-[#222] bg-[#141414] p-5 overflow-x-auto">
               <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#888] mb-3">Clone for development</p>
-              <p className="font-[family-name:var(--font-geist-mono)] text-sm">
+              <p className="font-[family-name:var(--font-geist-mono)] text-xs sm:text-sm whitespace-nowrap">
                 <span className="text-[#555]">$</span>{" "}
                 <span className="text-[#ededed]">git clone https://github.com/tmoody1973/crate-cli.git</span>
               </p>
-              <p className="font-[family-name:var(--font-geist-mono)] text-sm mt-1">
+              <p className="font-[family-name:var(--font-geist-mono)] text-xs sm:text-sm mt-1 whitespace-nowrap">
                 <span className="text-[#555]">$</span>{" "}
                 <span className="text-[#ededed]">cd crate-cli && npm install && npm run dev</span>
               </p>
@@ -1206,7 +1255,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-[#222] px-6 py-12">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 sm:flex-row sm:justify-between">
           <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555]">
             Crate CLI &middot; MIT License
           </p>
