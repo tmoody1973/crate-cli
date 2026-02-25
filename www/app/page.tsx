@@ -60,6 +60,17 @@ export default function Home() {
           <span className="font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.25em] uppercase text-[#888]">
             Crate
           </span>
+          <span className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.15em] text-[#555] hidden lg:inline">
+            Made with <span className="text-red-500">♥</span> by{" "}
+            <a
+              href="https://tarikmoody.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Tarik Moody
+            </a>
+          </span>
           <div className="flex items-center gap-8">
             <a
               href="#about"
@@ -1014,6 +1025,17 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555]">
             Crate CLI &middot; MIT License
+          </p>
+          <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.15em] text-[#555]">
+            Made with <span className="text-red-500">♥</span> by{" "}
+            <a
+              href="https://tarikmoody.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#888] transition-colors hover:text-[#ededed]"
+            >
+              Tarik Moody
+            </a>
           </p>
           <div className="flex gap-8">
             <a

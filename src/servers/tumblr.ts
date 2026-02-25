@@ -471,6 +471,50 @@ export function markdownToNpf(text: string): NpfBlock[] {
       continue;
     }
 
+    // Markdown table (| col | col |)
+    if (line.includes("|") && line.trim().startsWith("|")) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i]!.trim().startsWith("|")) {
+        tableLines.push(lines[i]!);
+        i++;
+      }
+      // Parse into rows, skip separator row (|---|---|)
+      const rows: string[][] = [];
+      for (const tl of tableLines) {
+        const cells = tl
+          .split("|")
+          .slice(1, -1) // drop empty first/last from leading/trailing |
+          .map((c) => c.trim());
+        // Skip separator rows like |---|---|
+        if (cells.every((c) => /^[-:]+$/.test(c))) continue;
+        rows.push(cells);
+      }
+      if (rows.length > 0) {
+        // Calculate column widths for alignment
+        const colCount = Math.max(...rows.map((r) => r.length));
+        const colWidths: number[] = Array(colCount).fill(0);
+        for (const row of rows) {
+          for (let c = 0; c < colCount; c++) {
+            colWidths[c] = Math.max(colWidths[c]!, (row[c] ?? "").length);
+          }
+        }
+        // Render as aligned preformatted text
+        const formatted = rows.map((row, ri) => {
+          const line = row
+            .map((cell, ci) => cell.padEnd(colWidths[ci]!))
+            .join("  │  ");
+          if (ri === 0) {
+            // Add underline after header row
+            const separator = colWidths.map((w) => "─".repeat(w)).join("──┼──");
+            return line + "\n" + separator;
+          }
+          return line;
+        });
+        blocks.push({ type: "text", subtype: "indented", text: formatted.join("\n") });
+      }
+      continue;
+    }
+
     // Fenced code block (```lang ... ```)
     if (line.trimEnd().startsWith("```")) {
       i++;
