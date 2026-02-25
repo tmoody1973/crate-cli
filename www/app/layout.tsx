@@ -25,12 +25,21 @@ export const metadata: Metadata = {
       "92 tools across 17 sources. Influence tracing backed by Harvard research. Every claim cited, every track verified.",
     type: "website",
     url: "https://crate-cli.dev",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Crate — The most powerful AI agent for music research",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Crate — AI-Powered Music Research Agent",
     description:
       "92 tools across 17 sources. Influence tracing backed by Harvard research. Every claim cited, every track verified.",
+    images: ["/og-image.png"],
   },
 };
 
