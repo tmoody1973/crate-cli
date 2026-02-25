@@ -70,7 +70,41 @@ Happy digging 🎵
 
 ---
 
-## 3. Screenshot Plan
+## 3. Competitive Positioning — Category of One
+
+### The Landscape (researched Feb 2026)
+
+We searched GitHub, Product Hunt, academic papers, and MCP server registries. **No other product combines agentic AI with music research.**
+
+| Tool | What it does | What it doesn't do |
+|------|-------------|-------------------|
+| **Microsoft MusicAgent** | Audio processing — classification, transcription, generation (academic prototype, EMNLP 2023) | Zero music research. No databases. Not a shipped product. |
+| **Suno / Udio / AIVA** | Text-to-music generation — create songs from prompts | Creates music, doesn't research it. No data sources, no citations. |
+| **Discogs/Last.fm MCP** | Individual API servers for Claude Desktop | Disconnected building blocks. No cross-referencing, no agent, no unified workflow. |
+| **SoulSync** | Automated music download/collection manager (Python/Flask) | No AI, no LLM, no natural language. Automation tool, not research. |
+| **Soundcharts / Chartmetric** | Commercial music analytics SaaS for labels/A&R | Industry tools. No agent, no CLI, no influence tracing. Expensive. |
+| **Every Noise at Once** | Genre-mapping visualization | Single-purpose web visualization. Not a tool, not an agent. |
+| **Crate** | **92 tools, 17 sources, influence tracing, knowledge graph, audio playback, publishing** | **Nothing. It's the only one.** |
+
+### Key Insight for Messaging
+
+Every AI music tool in existence focuses on music **creation** (generating beats, composing, producing). Crate is the only one focused on music **knowledge** — research, discovery, influence, and understanding. This is the core differentiator to emphasize in all PH copy and social posts.
+
+### Why Not Spotify's Algorithm
+
+This is a strong angle for the PH audience. Spotify recommends based on collaborative filtering ("people who listened to X also listened to Y") and audio fingerprinting (tempo, key, energy). This creates filter bubbles and surfaces popular music, not influential music.
+
+**Crate's approach:**
+- Traces connections through published music criticism, not listening behavior
+- Cites the specific review, critic, and publication for every connection
+- Discovers artists that exist outside any single streaming platform
+- Builds understanding, not just playlists
+
+**One-liner:** "Spotify follows the crowd. Crate follows the critics."
+
+---
+
+## 4. Screenshot Plan
 
 All images **1270×760px**, dark background (#0a0a0a), captured from actual terminal sessions or the landing page.
 
@@ -95,7 +129,7 @@ All images **1270×760px**, dark background (#0a0a0a), captured from actual term
 
 ---
 
-## 4. Thumbnail
+## 5. Thumbnail
 
 **Size:** 240×240px
 
@@ -105,7 +139,7 @@ All images **1270×760px**, dark background (#0a0a0a), captured from actual term
 
 ---
 
-## 5. Additional Assets
+## 6. Additional Assets
 
 ### Twitter/OG Card
 - **Size:** 1200×630px
@@ -127,7 +161,7 @@ All images **1270×760px**, dark background (#0a0a0a), captured from actual term
 
 ---
 
-## 6. Launch Strategy
+## 7. Launch Strategy
 
 ### Timing
 - **Best days:** Tuesday, Wednesday, or Thursday
@@ -181,7 +215,7 @@ All images **1270×760px**, dark background (#0a0a0a), captured from actual term
 
 ---
 
-## 7. Social Copy
+## 8. Social Copy
 
 ### Twitter/X Launch Thread
 
@@ -229,7 +263,18 @@ It extracts artist connections from co-mentions in music criticism across 26 pub
 Fela Kuti → Beyoncé? Crate traces the path and cites every hop.
 ```
 
-**Tweet 5 (demo / install):**
+**Tweet 5 (vs. Spotify):**
+```
+Spotify's algorithm: "People who listened to X also listened to Y."
+
+That's collaborative filtering — it follows the crowd and traps you in a bubble of the familiar.
+
+Crate follows the critics. It reads 26 music publications and traces influence through documented reviews, not listening data.
+
+Algorithms follow crowds. Crate follows critics.
+```
+
+**Tweet 6 (demo / install):**
 ```
 It plays music too. Built-in audio from YouTube + thousands of internet radio stations.
 
@@ -283,7 +328,7 @@ Post to relevant subreddits with community-appropriate tone (not promotional):
 
 ---
 
-## 8. Character Count Verification
+## 9. Character Count Verification
 
 | Field | Limit | Content | Count | Status |
 |-------|-------|---------|-------|--------|
@@ -296,7 +341,7 @@ Post to relevant subreddits with community-appropriate tone (not promotional):
 
 ---
 
-## 9. Post-Launch Metrics to Track
+## 10. Post-Launch Metrics to Track
 
 - Product Hunt upvotes and ranking
 - PH referral traffic (check Vercel Analytics)

@@ -378,6 +378,199 @@ export default function Home() {
         <div className="divider" />
       </div>
 
+      {/* Category of One */}
+      <section className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 max-w-2xl">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#e8a849] mb-6">
+              Category of One
+            </p>
+            <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+              Nothing else
+              <br />
+              like it exists.
+            </h2>
+            <p className="text-lg leading-relaxed text-[#888]">
+              We looked. Every other AI music tool focuses on <em className="text-[#666]">creating</em> music — generating beats, composing melodies, producing tracks. Not a single one is built for music <em className="text-[#ededed]">research</em>. Crate is the only agentic AI tool that connects to real music databases, traces influence through published criticism, and builds a knowledge graph from verified data.
+            </p>
+          </div>
+
+          <div className="grid gap-px border border-[#222] sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                name: "Microsoft MusicAgent",
+                type: "AI Agent",
+                does: "Audio processing — classification, transcription, generation",
+                gap: "Zero music research. No databases. Academic prototype, not a shipped product.",
+              },
+              {
+                name: "Suno / Udio / AIVA",
+                type: "AI Generation",
+                does: "Text-to-music generation — create songs from prompts",
+                gap: "Creates music, doesn't research it. No data sources, no citations, no knowledge.",
+              },
+              {
+                name: "Discogs/Last.fm MCP",
+                type: "Individual Servers",
+                does: "Single-source API access for Claude Desktop",
+                gap: "Disconnected building blocks. No cross-referencing, no agent, no unified workflow.",
+              },
+              {
+                name: "Crate",
+                type: "The Only One",
+                does: "92 tools, 17 sources, influence tracing, knowledge graph, audio playback, publishing",
+                gap: "",
+              },
+            ].map((item) => (
+              <div
+                key={item.name}
+                className={`p-6 sm:p-8 ${item.gap === "" ? "bg-[#0e0e0e] border border-[#e8a849]/30" : "bg-[#141414]"}`}
+              >
+                <p className={`font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.1em] mb-1 ${item.gap === "" ? "text-[#e8a849]" : "text-[#ededed]"}`}>
+                  {item.name}
+                </p>
+                <p className="font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.15em] uppercase text-[#555] mb-4">
+                  {item.type}
+                </p>
+                <p className="text-sm leading-relaxed text-[#888] mb-3">
+                  {item.does}
+                </p>
+                {item.gap && (
+                  <p className="text-xs leading-relaxed text-[#555] border-t border-[#222] pt-3">
+                    {item.gap}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 border border-[#222] bg-[#141414] px-8 py-6 text-center">
+            <p className="font-[family-name:var(--font-playfair)] text-lg leading-relaxed">
+              Every AI music tool makes music.
+              <br />
+              Crate is the only one that <span className="text-[#e8a849]">understands</span> it.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* Why Not Spotify */}
+      <section className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 max-w-2xl">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+              Why Not Spotify&apos;s Algorithm
+            </p>
+            <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+              Algorithms follow crowds.
+              <br />
+              Crate follows critics.
+            </h2>
+            <p className="text-lg leading-relaxed text-[#888]">
+              Spotify&apos;s algorithm recommends music based on what millions of other people listened to next. That&apos;s great for mainstream hits — but it traps you in a feedback loop of the familiar. Crate discovers connections the way music critics do: by reading reviews, tracing lineage, and following the thread from one artist to the next through documented evidence.
+            </p>
+          </div>
+
+          <div className="grid gap-px border border-[#222] md:grid-cols-2">
+            {/* Spotify column */}
+            <div className="bg-[#141414] p-8 sm:p-10">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#555] mb-6">
+                Spotify / Apple Music / YouTube Music
+              </p>
+              <div className="flex flex-col gap-5">
+                {[
+                  {
+                    label: "Collaborative filtering",
+                    desc: "\"People who listened to X also listened to Y.\" Follows the herd — surfaces what's popular, not what's influential.",
+                  },
+                  {
+                    label: "Audio fingerprinting",
+                    desc: "Matches sonic similarity — tempo, key, energy. Misses artistic intent, lyrical lineage, and cultural context entirely.",
+                  },
+                  {
+                    label: "Engagement-optimized",
+                    desc: "The algorithm rewards what keeps you listening longer, not what expands your knowledge. Designed for retention, not discovery.",
+                  },
+                  {
+                    label: "Black box",
+                    desc: "\"Because you listened to Radiohead\" — but why this specific track? No explanation, no source, no way to understand the connection.",
+                  },
+                  {
+                    label: "Platform-locked",
+                    desc: "Only sees its own catalog. Can't cross-reference Bandcamp exclusives, vinyl-only releases, or independent labels outside the platform.",
+                  },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <p className="font-[family-name:var(--font-geist-mono)] text-xs text-[#555] mb-1">
+                      {item.label}
+                    </p>
+                    <p className="text-sm leading-relaxed text-[#666]">
+                      {item.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Crate column */}
+            <div className="bg-[#0e0e0e] p-8 sm:p-10 border-l border-[#222]">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#e8a849] mb-6">
+                Crate
+              </p>
+              <div className="flex flex-col gap-5">
+                {[
+                  {
+                    label: "Review-driven discovery",
+                    desc: "Connections extracted from 26 music publications. Every link traced to a specific review, critic, and publication date.",
+                  },
+                  {
+                    label: "Cultural context",
+                    desc: "Understands why Fela Kuti influenced Beyoncé — the Afrobeat revival, the political messaging, the production choices. Not just \"similar BPM.\"",
+                  },
+                  {
+                    label: "Knowledge-optimized",
+                    desc: "Designed to make you smarter about music, not to keep you on a platform. Every session expands your understanding.",
+                  },
+                  {
+                    label: "Full transparency",
+                    desc: "Every connection shows the evidence chain: which publication, which review, which critic, what they said. You can verify it yourself.",
+                  },
+                  {
+                    label: "Platform-independent",
+                    desc: "Searches across 17 sources — Bandcamp, Discogs, MusicBrainz, YouTube, and more. Finds releases that don't exist on any single platform.",
+                  },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <p className="font-[family-name:var(--font-geist-mono)] text-xs text-[#e8a849] mb-1">
+                      {item.label}
+                    </p>
+                    <p className="text-sm leading-relaxed text-[#888]">
+                      {item.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 border border-[#222] bg-[#141414] px-8 py-6 text-center">
+            <p className="font-[family-name:var(--font-playfair)] text-lg leading-relaxed">
+              Spotify tells you what the <em className="text-[#666]">crowd</em> listens to.
+              <br />
+              Crate shows you what the <span className="text-[#e8a849]">critics</span> wrote about.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
       {/* Crate Social — Telegraph Publishing */}
       <section id="share" className="px-6 py-32">
         <div className="mx-auto max-w-6xl">
