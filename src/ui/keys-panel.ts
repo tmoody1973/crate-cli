@@ -32,6 +32,9 @@ const API_KEY_REGISTRY: KeyEntry[] = [
   { envVar: "YOUTUBE_API_KEY", server: "youtube", label: "YouTube API Key", description: "Improved search results (optional — works without)", signupUrl: "https://console.cloud.google.com/apis/credentials" },
   // Events
   { envVar: "TICKETMASTER_API_KEY", server: "events", label: "Ticketmaster Key", description: "Live event and concert discovery", signupUrl: "https://developer.ticketmaster.com/" },
+  // Tumblr
+  { envVar: "TUMBLR_CONSUMER_KEY", server: "tumblr", label: "Tumblr Consumer Key", description: "Publish posts to your Tumblr blog", signupUrl: "https://www.tumblr.com/oauth/apps" },
+  { envVar: "TUMBLR_CONSUMER_SECRET", server: "tumblr", label: "Tumblr Consumer Secret", description: "Publish posts to your Tumblr blog", signupUrl: "https://www.tumblr.com/oauth/apps" },
 ];
 
 /** Mask an API key for display: show first 6 + last 3 chars for keys > 12 chars. */

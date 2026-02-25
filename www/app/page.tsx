@@ -19,6 +19,7 @@ const SOURCES = [
   { name: "Influence Cache", tools: 8, category: "Network" },
   { name: "Memory", tools: 3, category: "Personal" },
   { name: "Telegraph", tools: 5, category: "Publishing" },
+  { name: "Tumblr", tools: 5, category: "Blogging" },
 ];
 
 const PUBLICATIONS = [
@@ -157,7 +158,7 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#b0b0b0] mb-12">
-            87 tools across 16 sources. Influence tracing powered by Harvard
+            92 tools across 17 sources. Influence tracing powered by Harvard
             research. A terminal-native agent that understands music the way
             critics and collectors do.
           </p>
@@ -173,8 +174,8 @@ export default function Home() {
         {/* Stats row */}
         <div className="mx-auto mt-20 grid max-w-3xl grid-cols-3 gap-px border border-[#222]">
           {[
-            { number: "87", label: "Tools" },
-            { number: "16", label: "Sources" },
+            { number: "92", label: "Tools" },
+            { number: "17", label: "Sources" },
             { number: "26", label: "Publications" },
           ].map((stat) => (
             <div
@@ -206,7 +207,7 @@ export default function Home() {
                 music obsessives.
               </h2>
               <p className="text-lg leading-relaxed text-[#888]">
-                Crate is a terminal-based AI agent that connects to 16 music
+                Crate is a terminal-based AI agent that connects to 17 music
                 data sources — from MusicBrainz and Discogs to Bandcamp and
                 Genius — giving you research-grade access to the full landscape
                 of recorded music.
@@ -232,7 +233,7 @@ export default function Home() {
                 },
                 {
                   title: "Share your discoveries",
-                  desc: "Publish influence chains, artist deep dives, and playlists to a public web page — instantly shareable with anyone. No account required.",
+                  desc: "Publish influence chains, artist deep dives, and playlists to Telegraph for instant shareable pages, or post to your Tumblr blog with full markdown formatting and auto-tagging.",
                 },
               ].map((item) => (
                 <div key={item.title} className="py-4">
@@ -385,10 +386,9 @@ export default function Home() {
               <p className="text-lg leading-relaxed text-[#888] mb-8">
                 Every influence chain, artist deep dive, and playlist you research
                 can become a public web page — instantly shareable via a simple link.
-                No account, no API key, no setup beyond one command.
+                Two publishing options to fit your workflow.
               </p>
-              <p className="text-lg leading-relaxed text-[#888]">
-                Built on{" "}
+              <p className="text-lg leading-relaxed text-[#888] mb-4">
                 <a
                   href="https://telegra.ph"
                   target="_blank"
@@ -398,7 +398,19 @@ export default function Home() {
                   Telegraph
                 </a>
                 {" "}— Telegram&apos;s anonymous publishing platform. Zero friction,
-                free forever.
+                no account, free forever.
+              </p>
+              <p className="text-lg leading-relaxed text-[#888]">
+                <a
+                  href="https://www.tumblr.com/oauth/apps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#e8a849] hover:text-[#d4963d] transition-colors"
+                >
+                  Tumblr
+                </a>
+                {" "}— Post to your own blog with full markdown-to-NPF conversion,
+                auto-tagging, and OAuth authentication.
               </p>
             </div>
 
@@ -507,7 +519,7 @@ export default function Home() {
             Data Sources
           </p>
           <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-16">
-            16 sources. 87 tools.
+            17 sources. 92 tools.
             <br />
             One conversation.
           </h2>
@@ -551,7 +563,7 @@ export default function Home() {
             </h2>
             <p className="text-lg leading-relaxed text-[#888]">
               Crate uses Anthropic&apos;s Agent SDK to orchestrate multi-turn
-              research across all 15 sources. Claude decides which tools to call,
+              research across all 17 sources. Claude decides which tools to call,
               chains results together, and reasons through complex queries — all
               in a single conversation loop.
             </p>
@@ -620,6 +632,11 @@ export default function Home() {
                 name: "Telegraph API",
                 role: "Publishing",
                 desc: "Anonymous, zero-friction publishing via Telegram's Telegraph platform. No API key, no account — instant shareable pages.",
+              },
+              {
+                name: "Tumblr API",
+                role: "Blogging",
+                desc: "OAuth 1.0a publishing to your Tumblr blog. Markdown-to-NPF conversion with auto-tagging and category support.",
               },
               {
                 name: "TypeScript",
@@ -896,6 +913,7 @@ export default function Home() {
                 { key: "DISCOGS_KEY", label: "Discogs", note: "Vinyl catalog, labels, pressings", url: "https://www.discogs.com/settings/developers", tag: "optional" },
                 { key: "EXA_API_KEY", label: "Exa", note: "Neural semantic search", url: "https://exa.ai/", tag: "optional" },
                 { key: "YOUTUBE_API_KEY", label: "YouTube", note: "Improved search results", url: "https://console.cloud.google.com/apis", tag: "optional" },
+                { key: "TUMBLR_CONSUMER_KEY", label: "Tumblr", note: "Publish research to your blog", url: "https://www.tumblr.com/oauth/apps", tag: "optional" },
                 { key: "TICKETMASTER_API_KEY", label: "Ticketmaster", note: "Concert and event discovery", url: "https://developer.ticketmaster.com/", tag: "optional" },
               ].map((item) => (
                 <div key={item.key} className="bg-[#0e0e0e] p-4">

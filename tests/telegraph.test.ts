@@ -171,6 +171,84 @@ describe("markdownToNodes", () => {
     expect(children[2]).toEqual({ tag: "em", children: ["italic"] });
     expect(children[4]).toEqual({ tag: "a", attrs: { href: "http://x.com" }, children: ["link"] });
   });
+
+  it("converts inline code", () => {
+    const nodes = markdownToNodes("Use `npm install` to install");
+    expect(nodes).toEqual([
+      { tag: "p", children: ["Use ", { tag: "code", children: ["npm install"] }, " to install"] },
+    ]);
+  });
+
+  it("converts fenced code blocks to pre", () => {
+    const md = "```\nconst x = 1;\nconst y = 2;\n```";
+    const nodes = markdownToNodes(md);
+    expect(nodes).toEqual([{ tag: "pre", children: ["const x = 1;\nconst y = 2;"] }]);
+  });
+
+  it("converts fenced code blocks with language tag", () => {
+    const md = "```typescript\nfunction hello(): void {\n  console.log('hi');\n}\n```";
+    const nodes = markdownToNodes(md);
+    expect(nodes).toEqual([
+      { tag: "pre", children: ["function hello(): void {\n  console.log('hi');\n}"] },
+    ]);
+  });
+
+  it("handles code blocks mixed with other content", () => {
+    const md = "## Example\n\nSome text\n\n```\nx = 1\n```\n\nMore text";
+    const nodes = markdownToNodes(md);
+    expect(nodes).toHaveLength(4);
+    expect(nodes[0]).toEqual({ tag: "h4", children: ["Example"] });
+    expect(nodes[1]!.tag).toBe("p");
+    expect(nodes[2]).toEqual({ tag: "pre", children: ["x = 1"] });
+    expect(nodes[3]!.tag).toBe("p");
+  });
+
+  it("handles inline code mixed with bold and italic", () => {
+    const nodes = markdownToNodes("Run `crate` with **--verbose** flag");
+    expect(nodes).toHaveLength(1);
+    const children = (nodes[0] as any).children;
+    expect(children[0]).toBe("Run ");
+    expect(children[1]).toEqual({ tag: "code", children: ["crate"] });
+    expect(children[2]).toBe(" with ");
+    expect(children[3]).toEqual({ tag: "b", children: ["--verbose"] });
+    expect(children[4]).toBe(" flag");
+  });
+
+  it("auto-links bare URLs", () => {
+    const nodes = markdownToNodes("Source: https://pitchfork.com/reviews/albums/kassa-overall");
+    expect(nodes).toEqual([
+      {
+        tag: "p",
+        children: [
+          "Source: ",
+          { tag: "a", attrs: { href: "https://pitchfork.com/reviews/albums/kassa-overall" }, children: ["https://pitchfork.com/reviews/albums/kassa-overall"] },
+        ],
+      },
+    ]);
+  });
+
+  it("auto-links bare URLs mixed with other text", () => {
+    const nodes = markdownToNodes("Read more at https://example.com/article and https://other.com/page for details");
+    expect(nodes).toHaveLength(1);
+    const children = (nodes[0] as any).children;
+    expect(children[0]).toBe("Read more at ");
+    expect(children[1]).toEqual({ tag: "a", attrs: { href: "https://example.com/article" }, children: ["https://example.com/article"] });
+    expect(children[2]).toBe(" and ");
+    expect(children[3]).toEqual({ tag: "a", attrs: { href: "https://other.com/page" }, children: ["https://other.com/page"] });
+    expect(children[4]).toBe(" for details");
+  });
+
+  it("prefers markdown links over bare URL detection", () => {
+    const nodes = markdownToNodes("[Pitchfork Review](https://pitchfork.com/reviews)");
+    expect(nodes).toEqual([
+      {
+        tag: "p",
+        children: [
+          { tag: "a", attrs: { href: "https://pitchfork.com/reviews" }, children: ["Pitchfork Review"] },
+        ],
+      },
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------

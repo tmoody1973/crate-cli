@@ -11,6 +11,7 @@ const KEY_GATED_SERVERS: Record<string, string[]> = {
   events: ["TICKETMASTER_API_KEY"],
   youtube: ["YOUTUBE_API_KEY"],
   "web-search": ["TAVILY_API_KEY", "EXA_API_KEY"],
+  tumblr: ["TUMBLR_CONSUMER_KEY", "TUMBLR_CONSUMER_SECRET"],
   // wikipedia: always enabled (free endpoints; Enterprise credentials optional)
 };
 

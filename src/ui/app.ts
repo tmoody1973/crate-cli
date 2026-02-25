@@ -241,6 +241,17 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Remembering...";
     case "list_user_memories":
       return "Loading memories...";
+    // Tumblr tools
+    case "connect_tumblr":
+      return "Connecting to Tumblr...";
+    case "post_to_tumblr":
+      return "Publishing to Tumblr...";
+    case "tumblr_blog_info":
+      return "Fetching Tumblr blog info...";
+    case "disconnect_tumblr":
+      return "Disconnecting Tumblr...";
+    case "tumblr_status":
+      return "Checking Tumblr status...";
     // Telegraph tools
     case "setup_page":
       return "Setting up your Crate social page...";
@@ -275,6 +286,7 @@ const SERVER_LABELS: Record<string, string> = {
   influencecache: "Cache",
   memory: "Memory",
   telegraph: "Telegraph",
+  tumblr: "Tumblr",
 };
 
 /** Extract the server name from a fully-qualified MCP tool name. */

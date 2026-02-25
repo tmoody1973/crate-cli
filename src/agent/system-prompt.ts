@@ -114,6 +114,14 @@ Publish and share your music research on a public web page. Your Crate social pa
 - **list_entries** — List all published entries, optionally filtered by category.
 - **delete_entry** — Remove an entry from your page index.
 
+### Tumblr (requires TUMBLR_CONSUMER_KEY + TUMBLR_CONSUMER_SECRET)
+Publish music research to your Tumblr blog via OAuth 1.0a. Content is written in markdown and converted to Tumblr's NPF (Neue Post Format).
+- **connect_tumblr** — One-time OAuth setup. Opens the browser for authorization. Stores credentials locally.
+- **post_to_tumblr** — Publish a post (title, markdown content, optional tags and category). Categories: influence, artist, playlist, collection, note. Auto-adds "crate" and "music" tags.
+- **tumblr_blog_info** — Get blog details and recent posts.
+- **disconnect_tumblr** — Remove stored credentials. Post history is preserved.
+- **tumblr_status** — Check connection status and token validity.
+
 ### Influence Cache (always available, local SQLite)
 Persistent local cache of discovered artist influence relationships. The graph grows organically as you discover connections — always check cache BEFORE making expensive web searches.
 - **cache_influence** — Save a single influence edge (from→to + evidence). Upserts: on conflict updates weight to MAX and appends source. Use after discovering a connection.

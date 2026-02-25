@@ -86,8 +86,8 @@ async function telegraphCall(method: string, params: Record<string, any>): Promi
 
 function parseInline(text: string): (string | TelegraphNode)[] {
   const result: (string | TelegraphNode)[] = [];
-  // Regex matches: **bold**, *italic*, [text](url)
-  const inlineRe = /\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)]+)\)/g;
+  // Regex matches: `code`, **bold**, *italic*, [text](url), bare URLs
+  const inlineRe = /`([^`]+?)`|\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s,)<>]+)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -98,14 +98,20 @@ function parseInline(text: string): (string | TelegraphNode)[] {
     }
 
     if (match[1] !== undefined) {
-      // **bold**
-      result.push({ tag: "b", children: [match[1]] });
+      // `code`
+      result.push({ tag: "code", children: [match[1]] });
     } else if (match[2] !== undefined) {
+      // **bold**
+      result.push({ tag: "b", children: [match[2]] });
+    } else if (match[3] !== undefined) {
       // *italic*
-      result.push({ tag: "em", children: [match[2]] });
-    } else if (match[3] !== undefined && match[4] !== undefined) {
+      result.push({ tag: "em", children: [match[3]] });
+    } else if (match[4] !== undefined && match[5] !== undefined) {
       // [text](url)
-      result.push({ tag: "a", attrs: { href: match[4] }, children: [match[3]] });
+      result.push({ tag: "a", attrs: { href: match[5] }, children: [match[4]] });
+    } else if (match[6] !== undefined) {
+      // bare URL
+      result.push({ tag: "a", attrs: { href: match[6] }, children: [match[6]] });
     }
 
     lastIndex = match.index + match[0].length;
@@ -168,6 +174,19 @@ export function markdownToNodes(text: string): TelegraphNode[] {
         i++;
       }
       nodes.push({ tag: "ul", children: listItems });
+      continue;
+    }
+
+    // Fenced code block (```lang ... ```)
+    if (line.trimEnd().startsWith("```")) {
+      i++;
+      const codeLines: string[] = [];
+      while (i < lines.length && !lines[i]!.trimEnd().startsWith("```")) {
+        codeLines.push(lines[i]!);
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing ```
+      nodes.push({ tag: "pre", children: [codeLines.join("\n")] });
       continue;
     }
 

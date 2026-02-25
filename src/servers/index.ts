@@ -15,6 +15,7 @@ import { webSearchServer, hasTavily, hasExa } from "./web-search.js";
 import { influenceServer } from "./influence.js";
 import { influenceCacheServer } from "./influence-cache.js";
 import { telegraphServer } from "./telegraph.js";
+import { tumblrServer } from "./tumblr.js";
 
 export function getActiveServers(): Record<string, any> {
   const servers: Record<string, any> = {
@@ -41,6 +42,8 @@ export function getActiveServers(): Record<string, any> {
   if (hasTavily() || hasExa()) servers.influence = influenceServer;
   servers.influencecache = influenceCacheServer; // Always available (local SQLite)
   servers.telegraph = telegraphServer; // Always available (anonymous Telegraph API)
+  if (process.env.TUMBLR_CONSUMER_KEY && process.env.TUMBLR_CONSUMER_SECRET)
+    servers.tumblr = tumblrServer;
 
   return servers;
 }
@@ -54,7 +57,7 @@ export function getServerStatus(): { active: string[]; inactive: string[] } {
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
-    "radio", "news", "collection", "playlist", "websearch", "influence", "influencecache", "telegraph",
+    "radio", "news", "collection", "playlist", "websearch", "influence", "influencecache", "telegraph", "tumblr",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };

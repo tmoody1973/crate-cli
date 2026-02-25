@@ -149,8 +149,10 @@ See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep
 | **Genius** | 6 (song search, annotations, artist info) | Yes |
 | **Web Search** | 3 (search, find similar, extract content) | Yes* |
 | **Influence Network** | 4 (search reviews, extract influences, trace path, bridge artists) | Yes* |
+| **Telegraph** | 5 (setup page, post, view page, list entries, delete entry) | No |
+| **Tumblr** | 5 (connect, post, blog info, disconnect, status) | Yes |
 
-MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, and Influence Cache are always available — no API keys needed. The others activate automatically when you provide their API keys.
+MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, Influence Cache, and Telegraph are always available — no API keys needed. The others activate automatically when you provide their API keys.
 
 *Web Search and Influence Network use dual providers — Tavily (keyword) and Exa.ai (neural/semantic). Either key enables both servers; both keys unlock the full toolkit.
 
@@ -329,6 +331,35 @@ Persistent local SQLite cache that stores every discovered influence relationshi
 
 See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep-dive: research foundation, algorithms, architecture, and how these features compare to streaming service recommendations.
 
+### Telegraph (always available)
+
+Publish your research as shareable web pages via [Telegraph](https://telegra.ph/) — Telegram's anonymous publishing platform. No API key, no account required.
+
+| Tool | What it does |
+|------|-------------|
+| `setup_telegraph_page` | Create your Crate social page — a public index of everything you publish |
+| `post_to_telegraph` | Publish an entry (influence chain, artist profile, playlist) to your page |
+| `view_telegraph_page` | View your page and all published entries |
+| `list_telegraph_entries` | List all entries with titles, categories, and URLs |
+| `delete_telegraph_entry` | Remove an entry from your page |
+
+### Tumblr (requires `TUMBLR_CONSUMER_KEY` + `TUMBLR_CONSUMER_SECRET`)
+
+Publish your music research to your Tumblr blog. Markdown content is automatically converted to Tumblr's NPF (Neue Post Format) with full formatting support — headings, bold, italic, links, lists, blockquotes, and code blocks. Posts are auto-tagged with `crate` + `music` and an optional category.
+
+| Tool | What it does |
+|------|-------------|
+| `connect_tumblr` | One-time OAuth 1.0a setup — opens your browser to authorize Crate. Supports multi-blog accounts |
+| `post_to_tumblr` | Publish a post with markdown content, tags, and category (influence, artist, playlist, collection, note) |
+| `tumblr_blog_info` | View your connected blog details and recent posts |
+| `disconnect_tumblr` | Remove stored credentials (post history is preserved) |
+| `tumblr_status` | Check if Tumblr is connected |
+
+To set up Tumblr publishing:
+1. Register an app at [tumblr.com/oauth/apps](https://www.tumblr.com/oauth/apps)
+2. Set `TUMBLR_CONSUMER_KEY` and `TUMBLR_CONSUMER_SECRET` in your `.env`
+3. In Crate, ask the agent to connect to Tumblr — it will open your browser for OAuth authorization
+
 ## Quick Start
 
 ### Prerequisites
@@ -427,6 +458,8 @@ A now-playing bar auto-appears at the bottom of the terminal during playback, sh
 | `EXA_API_KEY` | Exa.ai web search (neural/semantic) | No |
 | `MEM0_API_KEY` | Persistent memory across sessions | No |
 | `YOUTUBE_API_KEY` | YouTube Data API key (enhances search) | No |
+| `TUMBLR_CONSUMER_KEY` | Tumblr OAuth consumer key | No |
+| `TUMBLR_CONSUMER_SECRET` | Tumblr OAuth consumer secret | No |
 | `TICKETMASTER_API_KEY` | Live event and concert discovery | No |
 
 All keys can be managed interactively from within Crate using the `/keys` command — no need to edit `.env` manually.
@@ -454,6 +487,8 @@ crate-cli/
 │   │   ├── web-search.ts      # Web search MCP server (3 tools, Tavily + Exa)
 │   │   ├── influence.ts       # Influence network MCP server (4 tools, review co-mentions)
 │   │   ├── influence-cache.ts # Influence cache MCP server (8 tools, local SQLite)
+│   │   ├── telegraph.ts       # Telegraph publishing (5 tools, anonymous pages)
+│   │   ├── tumblr.ts          # Tumblr publishing (5 tools, OAuth 1.0a, NPF)
 │   │   ├── collection.ts      # Local collection manager (SQLite)
 │   │   ├── playlist.ts        # Playlist manager (SQLite)
 │   │   └── memory.ts          # Mem0 persistent memory
