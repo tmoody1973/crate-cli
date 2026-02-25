@@ -59,6 +59,7 @@ export default function Home() {
     { href: "#about", label: "About" },
     { href: "#why-crate", label: "Why Crate" },
     { href: "#share", label: "Share" },
+    { href: "#mcp", label: "MCP" },
     { href: "#sources", label: "Sources" },
     { href: "#stack", label: "Stack" },
     { href: "#research", label: "Research" },
@@ -209,8 +210,8 @@ export default function Home() {
           <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#b0b0b0] mb-12">
             The only agentic AI tool built for music research. 92 tools
             across 17 sources. Influence tracing powered by Harvard research.
-            A terminal-native agent that understands music the way critics
-            and collectors do.
+            A terminal agent and MCP server that understands music the way
+            critics and collectors do.
           </p>
 
           <div className="flex flex-col items-center gap-4">
@@ -746,6 +747,101 @@ export default function Home() {
               "Markdown support",
               "Auto-indexed",
               "Categories & filtering",
+            ].map((tag) => (
+              <span
+                key={tag}
+                className="border border-[#222] bg-[#0e0e0e] px-4 py-2 font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.15em] uppercase text-[#888]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="divider" />
+      </div>
+
+      {/* MCP Server Mode */}
+      <section id="mcp" className="px-6 py-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 max-w-2xl">
+            <p className="font-[family-name:var(--font-geist-mono)] text-[0.7rem] tracking-[0.25em] uppercase text-[#888] mb-6">
+              MCP Server Mode
+            </p>
+            <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
+              Use Crate anywhere.
+            </h2>
+            <p className="text-lg leading-relaxed text-[#888]">
+              Run <span className="font-[family-name:var(--font-geist-mono)] text-[#ededed]">crate --mcp-server</span> to
+              expose all 92 tools as a standard MCP server over stdio. Any MCP
+              client — Claude Desktop, Cursor, OpenClaw, or your own agent —
+              gets instant access to Crate&apos;s full music research stack.
+              No TUI, no agent loop, just raw tools.
+            </p>
+          </div>
+
+          {/* Config examples */}
+          <div className="grid gap-6 md:grid-cols-2 mb-16">
+            {/* Claude Desktop config */}
+            <div className="border border-[#222] bg-[#141414]">
+              <div className="flex items-center gap-2 border-b border-[#222] px-4 py-3">
+                <div className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+                <div className="h-3 w-3 rounded-full bg-[#febc2e]" />
+                <div className="h-3 w-3 rounded-full bg-[#28c840]" />
+                <span className="ml-3 font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-wider text-[#555]">
+                  claude_desktop_config.json
+                </span>
+              </div>
+              <div className="p-6 font-[family-name:var(--font-geist-mono)] text-sm leading-relaxed overflow-x-auto">
+                <pre className="text-[#888]">{`{
+  "mcpServers": {
+    "crate": {
+      "command": "npx",
+      "args": ["-y", "crate-cli", "--mcp-server"]
+    }
+  }
+}`}</pre>
+              </div>
+            </div>
+
+            {/* OpenClaw / Cursor config */}
+            <div className="border border-[#222] bg-[#141414]">
+              <div className="flex items-center gap-2 border-b border-[#222] px-4 py-3">
+                <div className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+                <div className="h-3 w-3 rounded-full bg-[#febc2e]" />
+                <div className="h-3 w-3 rounded-full bg-[#28c840]" />
+                <span className="ml-3 font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-wider text-[#555]">
+                  openclaw.json / .cursor/mcp.json
+                </span>
+              </div>
+              <div className="p-6 font-[family-name:var(--font-geist-mono)] text-sm leading-relaxed overflow-x-auto">
+                <pre className="text-[#888]">{`{
+  "mcpServers": {
+    "crate": {
+      "command": "npx",
+      "args": ["-y", "crate-cli", "--mcp-server"],
+      "env": {
+        "ANTHROPIC_API_KEY": "\${ANTHROPIC_API_KEY}",
+        "LASTFM_API_KEY": "\${LASTFM_API_KEY}",
+        "GENIUS_ACCESS_TOKEN": "\${GENIUS_ACCESS_TOKEN}"
+      }
+    }
+  }
+}`}</pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Feature tags */}
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              "92+ tools",
+              "stdio transport",
+              "zero config",
+              "env-var gating",
+              "any MCP client",
             ].map((tag) => (
               <span
                 key={tag}
