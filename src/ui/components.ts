@@ -105,6 +105,10 @@ ${chalk.bold("Library")}
   ${chalk.cyan("/collection")}      Collection stats
   ${chalk.cyan("/playlists")}       List playlists
 
+${chalk.bold("Social")}
+  ${chalk.cyan("/mypage")}          Your Crate page URL & recent entries
+  ${chalk.cyan("/entries")}${chalk.dim(" [cat]")}   List published entries (filter by category)
+
 ${chalk.bold("Session")}
   ${chalk.cyan("/model")}${chalk.dim(" [name]")}   Switch model (sonnet, opus, haiku)
   ${chalk.cyan("/cost")}            Token usage and cost

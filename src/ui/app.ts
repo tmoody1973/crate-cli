@@ -21,6 +21,10 @@ import {
 } from "../servers/youtube.js";
 import { collectionStatsHandler } from "../servers/collection.js";
 import { playlistListHandler } from "../servers/playlist.js";
+import {
+  viewMyPageHandler,
+  listEntriesHandler,
+} from "../servers/telegraph.js";
 import { showKeysPanel } from "./keys-panel.js";
 import {
   isFirstRun,
@@ -531,6 +535,80 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
       tui.requestRender();
       break;
     }
+    case "mypage": {
+      try {
+        const result = await viewMyPageHandler({} as any);
+        const data = JSON.parse(result.content[0].text);
+        if (data.status === "not_setup") {
+          const msg = [
+            chalk.bold("No Crate page set up yet."),
+            "",
+            chalk.dim("Ask the agent:"),
+            chalk.dim('  "Set up my Crate page"'),
+            chalk.dim('  "Set up my Crate page as DJ Maya"'),
+          ].join("\n");
+          addChildBeforeEditor(tui, new Text(msg, 1, 1));
+        } else {
+          const lines = [
+            chalk.bold("Your Crate Page"),
+            `  URL: ${chalk.cyan(data.url)}`,
+            `  Author: ${chalk.dim(data.author_name)}`,
+            `  Entries: ${chalk.cyan(String(data.total_entries))}`,
+          ];
+          if (data.recent_entries?.length) {
+            lines.push("", chalk.bold("  Recent:"));
+            for (const e of data.recent_entries as any[]) {
+              const cat = e.category ? chalk.dim(` [${e.category}]`) : "";
+              const date = e.created_at ? chalk.dim(` · ${e.created_at.slice(0, 10)}`) : "";
+              lines.push(`    ${e.title}${cat}${date}`);
+            }
+          }
+          addChildBeforeEditor(tui, new Text(lines.join("\n"), 1, 1));
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to fetch page info";
+        addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${msg}`), 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
+    case "entries": {
+      try {
+        const category = arg || undefined;
+        const result = await listEntriesHandler({ category, limit: 20 });
+        const data = JSON.parse(result.content[0].text);
+        if (data.error) {
+          addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${data.error}`), 1, 0));
+        } else if (!data.entries?.length) {
+          const emptyMsg = [
+            chalk.bold("No entries yet."),
+            "",
+            chalk.dim("Post your first entry:"),
+            chalk.dim('  "Post my Pharoah Sanders influence chain to my page"'),
+            chalk.dim('  "Publish a deep dive on Susumu Yokota"'),
+          ].join("\n");
+          addChildBeforeEditor(tui, new Text(emptyMsg, 1, 1));
+        } else {
+          const heading = category
+            ? `Published Entries [${category}]`
+            : "Published Entries";
+          const lines = [chalk.bold(heading)];
+          for (const e of data.entries as any[]) {
+            const cat = e.category ? chalk.dim(` [${e.category}]`) : "";
+            const date = e.created_at ? chalk.dim(` · ${e.created_at.slice(0, 10)}`) : "";
+            lines.push(`  ${chalk.cyan(`#${e.id}`)} ${e.title}${cat}${date}`);
+            lines.push(`    ${chalk.dim(e.url)}`);
+          }
+          lines.push("", chalk.dim(`${data.count} entries total`));
+          addChildBeforeEditor(tui, new Text(lines.join("\n"), 1, 1));
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to list entries";
+        addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${msg}`), 1, 0));
+      }
+      tui.requestRender();
+      break;
+    }
     case "keys": {
       showKeysPanel(tui, agent);
       break;
@@ -582,6 +660,9 @@ export function createApp(agent: CrateAgent): TUI {
     // Collection & Playlists
     { name: "collection", description: "Show collection stats" },
     { name: "playlists", description: "List all playlists" },
+    // Social
+    { name: "mypage", description: "Your Crate social page URL & recent entries" },
+    { name: "entries", description: "List published entries (/entries [category])" },
     // Session
     { name: "help", description: "Show available commands" },
     { name: "model", description: "Show or switch model (sonnet, opus, haiku)" },
