@@ -10,14 +10,15 @@
 **Crate**
 
 ### Tagline (60 char max)
-> AI-powered music research agent for the terminal (50 chars)
+> The most powerful AI agent for music research (47 chars)
 
 **Alternates:**
+- "The only agentic AI tool built for music" (41 chars)
 - "92 AI-powered tools for deep music research" (46 chars)
-- "The AI agent that researches music like a critic" (50 chars)
+- "AI-powered music research agent for the terminal" (50 chars)
 
 ### Short Description (260 char max)
-> Crate is a terminal-native AI agent that cross-references 17 music databases — MusicBrainz, Discogs, Bandcamp, Genius, and more — through 92 tools. Influence tracing backed by Harvard research. Every claim cited, every track verified. `npm install -g crate-cli` (261 chars)
+> The only agentic AI tool built for music. 92 tools across 17 databases — MusicBrainz, Discogs, Bandcamp, Genius, and more. Influence tracing backed by Harvard research. Every claim cited, every track verified. `npm i -g crate-cli` (231 chars)
 
 ### Topics
 - Artificial Intelligence
@@ -42,7 +43,7 @@ I built Crate because I was tired of asking ChatGPT music questions and getting 
 
 I'm a record collector and DJ, and I wanted an AI that researches music the way I do — by reading reviews, cross-referencing databases, and following the thread from one artist to the next. Not by guessing from training data.
 
-So I built Crate: a terminal-native AI agent with 92 tools across 17 music data sources. You talk to it in natural language, and it searches MusicBrainz, Discogs, Bandcamp, Genius, Last.fm, YouTube, and 11 more sources to answer your questions — citing every claim back to its source.
+So I built Crate — the only agentic AI tool built specifically for music. It's a terminal-native agent with 92 tools across 17 data sources. You talk to it in natural language, and it searches MusicBrainz, Discogs, Bandcamp, Genius, Last.fm, YouTube, and 11 more sources to answer your questions — citing every claim back to its source.
 
 **What makes it different:**
 
@@ -186,9 +187,9 @@ All images **1270×760px**, dark background (#0a0a0a), captured from actual term
 
 **Tweet 1 (announcement):**
 ```
-I just launched Crate on Product Hunt.
+I just launched Crate on Product Hunt — the most powerful AI agent for music research.
 
-It's a terminal AI agent that researches music like a critic — 92 tools, 17 databases, influence tracing backed by Harvard research.
+92 tools, 17 databases, influence tracing backed by Harvard research. The only agentic AI tool built specifically for music.
 
 Every claim cited. Every track verified. No hallucinations.
 

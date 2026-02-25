@@ -163,15 +163,16 @@ export default function Home() {
           />
 
           <h1 className="font-[family-name:var(--font-playfair)] text-5xl font-normal leading-[1.1] tracking-[-0.02em] sm:text-7xl md:text-8xl mb-8">
-            The deepest way to
+            The most powerful AI
             <br />
-            discover music.
+            agent for music.
           </h1>
 
           <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#b0b0b0] mb-12">
-            92 tools across 17 sources. Influence tracing powered by Harvard
-            research. A terminal-native agent that understands music the way
-            critics and collectors do.
+            The only agentic AI tool built for music research. 92 tools
+            across 17 sources. Influence tracing powered by Harvard research.
+            A terminal-native agent that understands music the way critics
+            and collectors do.
           </p>
 
           <div className="flex flex-col items-center gap-4">
@@ -219,15 +220,16 @@ export default function Home() {
                 What is Crate
               </p>
               <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-8">
-                An AI agent for
+                The only AI agent
                 <br />
-                music obsessives.
+                built for music.
               </h2>
               <p className="text-lg leading-relaxed text-[#888]">
-                Crate is a terminal-based AI agent that connects to 17 music
-                data sources — from MusicBrainz and Discogs to Bandcamp and
-                Genius — giving you research-grade access to the full landscape
-                of recorded music.
+                Crate is the most powerful agentic AI tool for music research.
+                It connects to 17 data sources — from MusicBrainz and Discogs
+                to Bandcamp and Genius — giving you research-grade access to
+                the full landscape of recorded music through a single
+                conversation.
               </p>
             </div>
             <div className="flex flex-col gap-8 border-l border-[#222] pl-12">
