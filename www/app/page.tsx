@@ -834,6 +834,35 @@ export default function Home() {
             </div>
           </div>
 
+          {/* ClawHub Skill callout */}
+          <div className="mb-16 border border-[#222] bg-[#0e0e0e] p-8">
+            <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#e8a849] mb-3">
+                  ClawHub Skill
+                </p>
+                <h3 className="font-[family-name:var(--font-playfair)] text-xl mb-2">
+                  Guided research workflows for OpenClaw
+                </h3>
+                <p className="text-sm leading-relaxed text-[#888]">
+                  The MCP server gives your agent tools. The ClawHub skill teaches it
+                  how to use them — structured workflows for influence tracing, track
+                  verification, playlist building, and publishing. Artist research
+                  patterns that cross-reference MusicBrainz, Genius, Discogs, and
+                  Last.fm in the right order. Critical rules like &ldquo;never
+                  hallucinate tracks&rdquo; and &ldquo;always cite the publication.&rdquo;
+                </p>
+              </div>
+              <div className="border border-[#222] bg-[#141414] px-6 py-4 font-[family-name:var(--font-geist-mono)] text-sm whitespace-nowrap">
+                <p className="text-[#555] text-[0.65rem] tracking-[0.2em] uppercase mb-2">Install</p>
+                <p>
+                  <span className="text-[#555]">$</span>{" "}
+                  <span className="text-[#ededed]">clawhub install crate-music-research</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Feature tags */}
           <div className="flex flex-wrap justify-center gap-3">
             {[
@@ -842,6 +871,7 @@ export default function Home() {
               "zero config",
               "env-var gating",
               "any MCP client",
+              "ClawHub skill",
             ].map((tag) => (
               <span
                 key={tag}
