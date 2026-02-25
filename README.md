@@ -377,17 +377,15 @@ sudo apt install yt-dlp mpv    # or your package manager
 
 ### Install
 
-**Try it instantly** (no clone needed):
-
-```bash
-npx crate-cli
-```
-
-**Or install globally:**
-
 ```bash
 npm install -g crate-cli
 crate
+```
+
+**Or try without installing:**
+
+```bash
+npx crate-cli
 ```
 
 **Or clone for development:**

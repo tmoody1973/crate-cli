@@ -166,7 +166,7 @@ export default function Home() {
           <div className="flex flex-col items-center gap-4">
             <div className="border border-[#e8a849]/30 bg-[#0a0a0a]/60 backdrop-blur-sm px-8 py-3 font-[family-name:var(--font-geist-mono)] text-sm">
               <span className="text-[#555]">$</span>{" "}
-              <span className="text-[#ededed]">npx crate-cli</span>
+              <span className="text-[#ededed]">npm install -g crate-cli</span>
             </div>
             <a
               href="#get-started"
@@ -880,30 +880,26 @@ export default function Home() {
             </p>
           </div>
 
-          {/* npx install block */}
+          {/* Global install block */}
           <div className="mb-12">
             <div className="border border-[#e8a849]/30 bg-[#141414] p-6 text-center">
               <p className="font-[family-name:var(--font-geist-mono)] text-lg sm:text-xl tracking-wide">
                 <span className="text-[#555]">$</span>{" "}
-                <span className="text-[#ededed]">npx crate-cli</span>
+                <span className="text-[#ededed]">npm install -g crate-cli</span>
               </p>
             </div>
             <p className="text-center text-sm text-[#555] mt-3">
-              Requires Node.js 20+. The setup wizard walks you through API keys on first run.
+              Requires Node.js 20+. Then just type <span className="font-[family-name:var(--font-geist-mono)] text-[#888]">crate</span> to start. The setup wizard walks you through API keys on first run.
             </p>
           </div>
 
           {/* Alternative install methods */}
           <div className="mb-16 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="border border-[#222] bg-[#141414] p-5">
-              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#888] mb-3">Install globally</p>
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#888] mb-3">Try without installing</p>
               <p className="font-[family-name:var(--font-geist-mono)] text-sm">
                 <span className="text-[#555]">$</span>{" "}
-                <span className="text-[#ededed]">npm install -g crate-cli</span>
-              </p>
-              <p className="font-[family-name:var(--font-geist-mono)] text-sm mt-1">
-                <span className="text-[#555]">$</span>{" "}
-                <span className="text-[#ededed]">crate</span>
+                <span className="text-[#ededed]">npx crate-cli</span>
               </p>
             </div>
             <div className="border border-[#222] bg-[#141414] p-5">
