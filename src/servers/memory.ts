@@ -176,8 +176,10 @@ const listUserMemories = tool(
 
 // --- Server export ---
 
+export const memoryTools = [getUserContext, updateUserMemory, rememberAboutUser, listUserMemories];
+
 export const memoryServer = createSdkMcpServer({
   name: "memory",
   version: "1.0.0",
-  tools: [getUserContext, updateUserMemory, rememberAboutUser, listUserMemories],
+  tools: memoryTools,
 });

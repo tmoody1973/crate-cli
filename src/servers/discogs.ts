@@ -378,18 +378,20 @@ const getMarketplaceStats = tool(
 
 // --- Server export ---
 
+export const discogsTools = [
+  searchDiscogs,
+  getArtistDiscogs,
+  getArtistReleases,
+  getLabel,
+  getLabelReleases,
+  getMaster,
+  getMasterVersions,
+  getReleaseFull,
+  getMarketplaceStats,
+];
+
 export const discogsServer = createSdkMcpServer({
   name: "discogs",
   version: "1.0.0",
-  tools: [
-    searchDiscogs,
-    getArtistDiscogs,
-    getArtistReleases,
-    getLabel,
-    getLabelReleases,
-    getMaster,
-    getMasterVersions,
-    getReleaseFull,
-    getMarketplaceStats,
-  ],
+  tools: discogsTools,
 });

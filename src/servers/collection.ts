@@ -359,15 +359,10 @@ const collectionTags = tool(
 
 // --- Server export ---
 
+export const collectionTools = [collectionAdd, collectionSearch, collectionUpdate, collectionRemove, collectionStats, collectionTags];
+
 export const collectionServer = createSdkMcpServer({
   name: "collection",
   version: "1.0.0",
-  tools: [
-    collectionAdd,
-    collectionSearch,
-    collectionUpdate,
-    collectionRemove,
-    collectionStats,
-    collectionTags,
-  ],
+  tools: collectionTools,
 });

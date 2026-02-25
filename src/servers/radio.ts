@@ -348,8 +348,10 @@ const playRadio = tool(
 // Server Export
 // ---------------------------------------------------------------------------
 
+export const radioTools = [searchRadio, browseRadio, getRadioTags, playRadio];
+
 export const radioServer = createSdkMcpServer({
   name: "radio",
   version: "1.0.0",
-  tools: [searchRadio, browseRadio, getRadioTags, playRadio],
+  tools: radioTools,
 });

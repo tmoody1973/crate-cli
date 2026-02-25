@@ -546,8 +546,10 @@ const playerControl = tool(
 // Server Export
 // ---------------------------------------------------------------------------
 
+export const youtubeTools = [searchTracks, playTrack, playPlaylist, playerControl];
+
 export const youtubeServer = createSdkMcpServer({
   name: "youtube",
   version: "1.0.0",
-  tools: [searchTracks, playTrack, playPlaylist, playerControl],
+  tools: youtubeTools,
 });

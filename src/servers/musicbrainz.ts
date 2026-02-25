@@ -168,10 +168,12 @@ const getRecordingCredits = tool(
   getRecordingCreditsHandler,
 );
 
-// --- Server export ---
+// --- Tool + Server exports ---
+
+export const musicbrainzTools = [searchArtist, getArtist, searchRelease, getRelease, searchRecording, getRecordingCredits];
 
 export const musicbrainzServer = createSdkMcpServer({
   name: "musicbrainz",
   version: "1.0.0",
-  tools: [searchArtist, getArtist, searchRelease, getRelease, searchRecording, getRecordingCredits],
+  tools: musicbrainzTools,
 });

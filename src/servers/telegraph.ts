@@ -546,8 +546,10 @@ const deleteEntry = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const telegraphTools = [setupPage, postToPage, viewMyPage, listEntries, deleteEntry];
+
 export const telegraphServer = createSdkMcpServer({
   name: "telegraph",
   version: "1.0.0",
-  tools: [setupPage, postToPage, viewMyPage, listEntries, deleteEntry],
+  tools: telegraphTools,
 });

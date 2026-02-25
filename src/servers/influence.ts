@@ -760,8 +760,10 @@ const findBridgeArtists = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const influenceTools = [searchReviews, extractInfluences, traceInfluencePath, findBridgeArtists];
+
 export const influenceServer = createSdkMcpServer({
   name: "influence",
   version: "1.0.0",
-  tools: [searchReviews, extractInfluences, traceInfluencePath, findBridgeArtists],
+  tools: influenceTools,
 });

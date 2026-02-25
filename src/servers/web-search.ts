@@ -570,8 +570,10 @@ const extractContent = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const webSearchTools = [searchWeb, findSimilar, extractContent];
+
 export const webSearchServer = createSdkMcpServer({
   name: "web-search",
   version: "1.0.0",
-  tools: [searchWeb, findSimilar, extractContent],
+  tools: webSearchTools,
 });

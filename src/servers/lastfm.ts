@@ -405,17 +405,10 @@ const getGeoTopTracks = tool(
 
 // --- Server export ---
 
+export const lastfmTools = [getArtistInfo, getAlbumInfo, getTrackInfo, getSimilarArtists, getSimilarTracks, getTopTracks, getTagArtists, getGeoTopTracks];
+
 export const lastfmServer = createSdkMcpServer({
   name: "lastfm",
   version: "1.0.0",
-  tools: [
-    getArtistInfo,
-    getAlbumInfo,
-    getTrackInfo,
-    getSimilarArtists,
-    getSimilarTracks,
-    getTopTracks,
-    getTagArtists,
-    getGeoTopTracks,
-  ],
+  tools: lastfmTools,
 });

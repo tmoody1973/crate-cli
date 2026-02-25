@@ -766,17 +766,10 @@ const removeCachedEdge = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const influenceCacheTools = [cacheInfluence, cacheBatchInfluences, lookupInfluences, findCachedPath, searchCachedArtists, influenceGraphStats, addArtistAlias, removeCachedEdge];
+
 export const influenceCacheServer = createSdkMcpServer({
   name: "influencecache",
   version: "1.0.0",
-  tools: [
-    cacheInfluence,
-    cacheBatchInfluences,
-    lookupInfluences,
-    findCachedPath,
-    searchCachedArtists,
-    influenceGraphStats,
-    addArtistAlias,
-    removeCachedEdge,
-  ],
+  tools: influenceCacheTools,
 });

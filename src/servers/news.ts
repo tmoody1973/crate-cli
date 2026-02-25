@@ -352,8 +352,10 @@ const getSourcesTool = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const newsTools = [searchNewsTool, latestReviewsTool, getSourcesTool];
+
 export const newsServer = createSdkMcpServer({
   name: "news",
   version: "1.0.0",
-  tools: [searchNewsTool, latestReviewsTool, getSourcesTool],
+  tools: newsTools,
 });

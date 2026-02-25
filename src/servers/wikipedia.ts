@@ -395,8 +395,10 @@ const getArticle = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const wikipediaTools = [searchArticles, getSummary, getArticle];
+
 export const wikipediaServer = createSdkMcpServer({
   name: "wikipedia",
   version: "2.0.0",
-  tools: [searchArticles, getSummary, getArticle],
+  tools: wikipediaTools,
 });

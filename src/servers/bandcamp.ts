@@ -884,8 +884,10 @@ const getBandcampEditorial = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const bandcampTools = [searchBandcamp, getArtistPage, getAlbum, getArtistTracks, discoverMusic, getTagInfo, getBandcampEditorial];
+
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",
   version: "1.0.0",
-  tools: [searchBandcamp, getArtistPage, getAlbum, getArtistTracks, discoverMusic, getTagInfo, getBandcampEditorial],
+  tools: bandcampTools,
 });

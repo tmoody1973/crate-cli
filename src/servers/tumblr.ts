@@ -815,8 +815,10 @@ const tumblrStatus = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const tumblrTools = [connectTumblr, postToTumblr, tumblrBlogInfo, disconnectTumblr, tumblrStatus];
+
 export const tumblrServer = createSdkMcpServer({
   name: "tumblr",
   version: "1.0.0",
-  tools: [connectTumblr, postToTumblr, tumblrBlogInfo, disconnectTumblr, tumblrStatus],
+  tools: tumblrTools,
 });

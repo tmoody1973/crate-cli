@@ -335,16 +335,10 @@ const playlistDelete = tool(
 
 // --- Server export ---
 
+export const playlistTools = [playlistCreate, playlistAddTrack, playlistList, playlistGet, playlistRemoveTrack, playlistExport, playlistDelete];
+
 export const playlistServer = createSdkMcpServer({
   name: "playlist",
   version: "1.0.0",
-  tools: [
-    playlistCreate,
-    playlistAddTrack,
-    playlistList,
-    playlistGet,
-    playlistRemoveTrack,
-    playlistExport,
-    playlistDelete,
-  ],
+  tools: playlistTools,
 });

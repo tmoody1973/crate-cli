@@ -415,6 +415,57 @@ Or pass any model directly:
 npx tsx src/cli.ts --model sonnet
 ```
 
+## MCP Server Mode
+
+Crate can run as a standard [MCP](https://modelcontextprotocol.io/) stdio server, exposing all 84+ music research tools to any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and more.
+
+```bash
+# Via CLI flag
+crate --mcp-server
+
+# Via dedicated binary
+crate-mcp
+
+# Via npx
+npx crate-cli --mcp-server
+```
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "crate-music-research": {
+      "command": "npx",
+      "args": ["-y", "crate-cli", "--mcp-server"],
+      "env": {
+        "DISCOGS_KEY": "your-key",
+        "DISCOGS_SECRET": "your-secret",
+        "LASTFM_API_KEY": "your-key",
+        "GENIUS_ACCESS_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+### Cursor / OpenClaw
+
+```json
+{
+  "mcpServers": {
+    "crate-music-research": {
+      "command": "npx",
+      "args": ["-y", "crate-cli", "--mcp-server"]
+    }
+  }
+}
+```
+
+Tools are prefixed by server name (e.g. `musicbrainz_search_artist`, `bandcamp_get_album`, `influence_trace_influence_path`). Only servers with configured API keys are exposed — see [Environment Variables](#environment-variables).
+
 ## Commands
 
 Type `/` to see all commands in the autocomplete dropdown.
@@ -470,11 +521,13 @@ All keys can be managed interactively from within Crate using the `/keys` comman
 crate-cli/
 ├── src/
 │   ├── cli.ts                 # Entry point, arg parsing
+│   ├── mcp-server.ts          # MCP stdio server entry point
 │   ├── agent/
 │   │   ├── index.ts           # CrateAgent class (wraps Claude Agent SDK)
 │   │   └── system-prompt.ts   # Agent personality and tool docs
 │   ├── servers/
 │   │   ├── index.ts           # Server registry (key-gated activation)
+│   │   ├── tool-registry.ts   # Tool aggregator for MCP server mode
 │   │   ├── musicbrainz.ts     # MusicBrainz MCP server (6 tools)
 │   │   ├── discogs.ts         # Discogs MCP server (9 tools)
 │   │   ├── genius.ts          # Genius MCP server (6 tools)

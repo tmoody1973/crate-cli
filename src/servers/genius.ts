@@ -286,15 +286,10 @@ const getAnnotation = tool(
 
 // --- Server export ---
 
+export const geniusTools = [searchSongs, getSong, getSongAnnotations, getArtistGenius, getArtistSongsGenius, getAnnotation];
+
 export const geniusServer = createSdkMcpServer({
   name: "genius",
   version: "1.0.0",
-  tools: [
-    searchSongs,
-    getSong,
-    getSongAnnotations,
-    getArtistGenius,
-    getArtistSongsGenius,
-    getAnnotation,
-  ],
+  tools: geniusTools,
 });
