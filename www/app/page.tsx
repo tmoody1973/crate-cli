@@ -163,12 +163,18 @@ export default function Home() {
             critics and collectors do.
           </p>
 
-          <a
-            href="#get-started"
-            className="inline-block border border-[#e8a849] px-8 py-3 font-[family-name:var(--font-geist-mono)] text-xs tracking-[0.2em] uppercase text-[#e8a849] transition-colors hover:bg-[#e8a849] hover:text-[#0a0a0a]"
-          >
-            Get Started
-          </a>
+          <div className="flex flex-col items-center gap-4">
+            <div className="border border-[#e8a849]/30 bg-[#0a0a0a]/60 backdrop-blur-sm px-8 py-3 font-[family-name:var(--font-geist-mono)] text-sm">
+              <span className="text-[#555]">$</span>{" "}
+              <span className="text-[#ededed]">npx crate-cli</span>
+            </div>
+            <a
+              href="#get-started"
+              className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#888] transition-colors hover:text-[#e8a849]"
+            >
+              More install options &darr;
+            </a>
+          </div>
         </div>
 
         {/* Stats row */}
@@ -870,39 +876,54 @@ export default function Home() {
               Start digging.
             </h2>
             <p className="mx-auto max-w-lg text-lg leading-relaxed text-[#888]">
-              Open source. MIT licensed. Three steps to your first session.
+              Open source. MIT licensed. One command to your first session.
             </p>
           </div>
 
-          {/* Step 1: Install */}
-          <div className="mb-16">
-            <div className="flex items-baseline gap-4 mb-4">
-              <span className="font-[family-name:var(--font-playfair)] text-3xl text-[#e8a849]">1</span>
-              <h3 className="font-[family-name:var(--font-playfair)] text-2xl">Clone and install</h3>
+          {/* npx install block */}
+          <div className="mb-12">
+            <div className="border border-[#e8a849]/30 bg-[#141414] p-6 text-center">
+              <p className="font-[family-name:var(--font-geist-mono)] text-lg sm:text-xl tracking-wide">
+                <span className="text-[#555]">$</span>{" "}
+                <span className="text-[#ededed]">npx crate-cli</span>
+              </p>
             </div>
-            <div className="border border-[#222] bg-[#141414] p-5 font-[family-name:var(--font-geist-mono)] text-sm leading-loose">
-              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">git clone https://github.com/tmoody1973/crate-cli.git</span></p>
-              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">cd crate-cli</span></p>
-              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">npm install</span></p>
-            </div>
-            <p className="text-sm text-[#555] mt-3">
-              Requires Node.js 20+ and an Anthropic API key.
-              For audio playback, install{" "}
-              <a href="https://mpv.io" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-[#ededed] transition-colors underline underline-offset-2">mpv</a>
-              {" "}and{" "}
-              <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-[#ededed] transition-colors underline underline-offset-2">yt-dlp</a>.
+            <p className="text-center text-sm text-[#555] mt-3">
+              Requires Node.js 20+. The setup wizard walks you through API keys on first run.
             </p>
           </div>
 
-          {/* Step 2: API Keys */}
+          {/* Alternative install methods */}
+          <div className="mb-16 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="border border-[#222] bg-[#141414] p-5">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#888] mb-3">Install globally</p>
+              <p className="font-[family-name:var(--font-geist-mono)] text-sm">
+                <span className="text-[#555]">$</span>{" "}
+                <span className="text-[#ededed]">npm install -g crate-cli</span>
+              </p>
+              <p className="font-[family-name:var(--font-geist-mono)] text-sm mt-1">
+                <span className="text-[#555]">$</span>{" "}
+                <span className="text-[#ededed]">crate</span>
+              </p>
+            </div>
+            <div className="border border-[#222] bg-[#141414] p-5">
+              <p className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#888] mb-3">Clone for development</p>
+              <p className="font-[family-name:var(--font-geist-mono)] text-sm">
+                <span className="text-[#555]">$</span>{" "}
+                <span className="text-[#ededed]">git clone https://github.com/tmoody1973/crate-cli.git</span>
+              </p>
+              <p className="font-[family-name:var(--font-geist-mono)] text-sm mt-1">
+                <span className="text-[#555]">$</span>{" "}
+                <span className="text-[#ededed]">cd crate-cli && npm install && npm run dev</span>
+              </p>
+            </div>
+          </div>
+
+          {/* API Keys */}
           <div className="mb-16">
             <div className="flex items-baseline gap-4 mb-4">
-              <span className="font-[family-name:var(--font-playfair)] text-3xl text-[#e8a849]">2</span>
-              <h3 className="font-[family-name:var(--font-playfair)] text-2xl">Add your API keys</h3>
-            </div>
-            <div className="border border-[#222] bg-[#141414] p-5 font-[family-name:var(--font-geist-mono)] text-sm leading-loose mb-4">
-              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">cp .env.example .env</span></p>
-              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">$EDITOR .env</span></p>
+              <h3 className="font-[family-name:var(--font-playfair)] text-2xl">API Keys</h3>
+              <span className="font-[family-name:var(--font-geist-mono)] text-[0.65rem] tracking-[0.2em] uppercase text-[#555]">configured in-app via setup wizard or /keys</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#222] border border-[#222]">
               {[
@@ -937,23 +958,13 @@ export default function Home() {
               ))}
             </div>
             <p className="text-sm text-[#555] mt-3">
-              Only Anthropic is required. Each additional key unlocks more data sources.
-              Free tiers are available for most services.
-            </p>
-          </div>
-
-          {/* Step 3: Run */}
-          <div className="mb-16">
-            <div className="flex items-baseline gap-4 mb-4">
-              <span className="font-[family-name:var(--font-playfair)] text-3xl text-[#e8a849]">3</span>
-              <h3 className="font-[family-name:var(--font-playfair)] text-2xl">Start a session</h3>
-            </div>
-            <div className="border border-[#222] bg-[#141414] p-5 font-[family-name:var(--font-geist-mono)] text-sm leading-loose">
-              <p><span className="text-[#555]">$</span> <span className="text-[#ededed]">npm run dev</span></p>
-            </div>
-            <p className="text-sm text-[#555] mt-3">
-              Use <span className="font-[family-name:var(--font-geist-mono)] text-[#888]">npm run dev:opus</span> for deep research
-              or <span className="font-[family-name:var(--font-geist-mono)] text-[#888]">npm run dev:haiku</span> for quick lookups.
+              Only Anthropic is required. The setup wizard prompts you for keys on first run.
+              Add or change keys anytime with{" "}
+              <span className="font-[family-name:var(--font-geist-mono)] text-[#888]">/keys</span>.
+              For audio playback, install{" "}
+              <a href="https://mpv.io" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-[#ededed] transition-colors underline underline-offset-2">mpv</a>
+              {" "}and{" "}
+              <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener noreferrer" className="text-[#888] hover:text-[#ededed] transition-colors underline underline-offset-2">yt-dlp</a>.
             </p>
           </div>
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // src/cli.ts
 import "dotenv/config";
 import { CrateAgent } from "./agent/index.js";
@@ -50,15 +51,12 @@ function main(): void {
     process.exit(0);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error(
-      "Error: ANTHROPIC_API_KEY is required. Set it in your environment or .env file.",
-    );
-    process.exit(1);
-  }
+  // If ANTHROPIC_API_KEY is set, create agent immediately; otherwise start in setup mode
+  const agent = process.env.ANTHROPIC_API_KEY
+    ? new CrateAgent(parsed.model)
+    : null;
 
-  const agent = new CrateAgent(parsed.model);
-  const app = createApp(agent);
+  const app = createApp(agent, { model: parsed.model });
   app.start();
 }
 

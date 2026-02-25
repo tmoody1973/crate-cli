@@ -35,6 +35,11 @@ import {
 } from "../utils/hints.js";
 import type { HintContext } from "../utils/hints.js";
 import { showOnboarding } from "./onboarding.js";
+import type { OnboardingResult } from "./onboarding.js";
+
+export interface AppOptions {
+  model?: string;
+}
 
 function addChildBeforeEditor(tui: TUI, child: any): void {
   const children = tui.children;
@@ -313,10 +318,24 @@ function buildProgressMessage(
   return parts.join(chalk.dim(" \u00B7 "));
 }
 
-async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): Promise<void> {
+async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: string): Promise<void> {
   const parts = input.slice(1).split(/\s+/);
   const command = parts[0]?.toLowerCase();
   const arg = parts[1];
+
+  // Commands that work without an agent
+  const noAgentCommands = new Set(["help", "clear", "servers", "quit", "exit",
+    "pause", "pp", "next", "prev", "stop", "vol", "np", "play",
+    "collection", "playlists", "mypage", "entries"]);
+
+  if (!agent && command && !noAgentCommands.has(command)) {
+    addChildBeforeEditor(
+      tui,
+      new Text(chalk.yellow("Complete setup first — enter your Anthropic API key in the wizard."), 1, 0),
+    );
+    tui.requestRender();
+    return;
+  }
 
   switch (command) {
     case "help": {
@@ -326,7 +345,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
     }
     case "model": {
       if (arg) {
-        const resolved = agent.switchModel(arg);
+        const resolved = agent!.switchModel(arg);
         addChildBeforeEditor(
           tui,
           new Text(chalk.dim(`Switched to ${chalk.cyan(resolved)}`), 1, 0),
@@ -335,7 +354,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
         addChildBeforeEditor(
           tui,
           new Text(
-            chalk.dim(`Active model: ${chalk.cyan(agent.activeModel)}`),
+            chalk.dim(`Active model: ${chalk.cyan(agent!.activeModel)}`),
             1,
             0,
           ),
@@ -345,7 +364,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
       break;
     }
     case "cost": {
-      const cost = agent.cost;
+      const cost = agent!.cost;
       addChildBeforeEditor(
         tui,
         new Text(chalk.dim(`Session cost: ${chalk.cyan(`$${cost.toFixed(4)}`)}`), 1, 0),
@@ -622,12 +641,12 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
       break;
     }
     case "keys": {
-      showKeysPanel(tui, agent);
+      showKeysPanel(tui, agent!);
       break;
     }
     case "quit":
     case "exit": {
-      if ((agent as any).endSession) {
+      if (agent && (agent as any).endSession) {
         try { await (agent as any).endSession(); } catch {}
       }
       tui.stop();
@@ -647,14 +666,29 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent, input: string): P
   }
 }
 
-export function createApp(agent: CrateAgent): TUI {
+export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
   const terminal = new ProcessTerminal();
   const tui = new TUI(terminal);
 
-  // Welcome message (onboarding on first run, normal welcome after)
-  if (isFirstRun()) {
-    showOnboarding(tui);
-    markOnboardingComplete();
+  // Mutable agent ref — wizard can set this after the user enters their key
+  let currentAgent = agent;
+
+  const needsAnthropicKey = !process.env.ANTHROPIC_API_KEY;
+
+  // Welcome message (onboarding on first run or missing key, normal welcome after)
+  if (isFirstRun() || needsAnthropicKey) {
+    showOnboarding(tui, needsAnthropicKey, (result: OnboardingResult) => {
+      if (result.anthropicKeySet && !currentAgent) {
+        // Anthropic key was just entered — construct agent now
+        currentAgent = new CrateAgent(options?.model);
+      }
+      if (currentAgent) {
+        currentAgent.reloadServers();
+      }
+      // Show welcome after wizard completes
+      addChildBeforeEditor(tui, new Text(WELCOME_TEXT, 1, 1));
+      tui.requestRender();
+    });
   } else {
     tui.addChild(new Text(WELCOME_TEXT, 1, 1));
   }
@@ -698,7 +732,17 @@ export function createApp(agent: CrateAgent): TUI {
 
     // Handle slash commands locally
     if (trimmed.startsWith("/")) {
-      await handleSlashCommand(tui, agent, trimmed);
+      await handleSlashCommand(tui, currentAgent, trimmed);
+      return;
+    }
+
+    // Guard: agent must exist before chatting
+    if (!currentAgent) {
+      addChildBeforeEditor(
+        tui,
+        new Text(chalk.yellow("Complete setup first — enter your Anthropic API key in the wizard."), 1, 0),
+      );
+      tui.requestRender();
       return;
     }
 
@@ -810,7 +854,7 @@ export function createApp(agent: CrateAgent): TUI {
     }
 
     try {
-      for await (const msg of agent.chat(trimmed)) {
+      for await (const msg of currentAgent.chat(trimmed)) {
         if (aborted) break;
 
         if (msg.type === "assistant") {
@@ -915,7 +959,7 @@ export function createApp(agent: CrateAgent): TUI {
       .map((s) => SERVER_LABELS[s] ?? s)
       .filter((s) => s !== "Collection" && s !== "Playlist" && s !== "Memory");
     const sourceList = displaySources.length > 0 ? displaySources.join(" \u00B7 ") : "";
-    const costStr = `$${agent.cost.toFixed(4)}`;
+    const costStr = `$${currentAgent.cost.toFixed(4)}`;
     const footerParts = [sourceList, `${duration}s`, costStr].filter(Boolean);
     addChildBeforeEditor(
       tui,

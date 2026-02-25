@@ -3,11 +3,19 @@
   "version": "0.1.0",
   "description": "AI-powered music research agent for the terminal",
   "type": "module",
-  "main": "src/cli.ts",
+  "main": "dist/cli.js",
+  "bin": {
+    "crate": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx src/cli.ts",
     "dev:opus": "tsx src/cli.ts --model opus",
     "dev:haiku": "tsx src/cli.ts --model haiku",
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

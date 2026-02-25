@@ -365,10 +365,7 @@ To set up Tumblr publishing:
 ### Prerequisites
 
 - Node.js 20+
-- npm
-- An [Anthropic API key](https://console.anthropic.com/)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — YouTube audio extraction
-- [mpv](https://mpv.io/) — audio playback
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) + [mpv](https://mpv.io/) — for audio playback (optional)
 
 ```bash
 # macOS
@@ -378,26 +375,31 @@ brew install yt-dlp mpv
 sudo apt install yt-dlp mpv    # or your package manager
 ```
 
-### Installation
+### Install
+
+**Try it instantly** (no clone needed):
+
+```bash
+npx crate-cli
+```
+
+**Or install globally:**
+
+```bash
+npm install -g crate-cli
+crate
+```
+
+**Or clone for development:**
 
 ```bash
 git clone https://github.com/tmoody1973/crate-cli.git
 cd crate-cli
 npm install
-cp .env.example .env
-```
-
-Edit `.env` and add your Anthropic API key:
-
-```
-ANTHROPIC_API_KEY=your-key-here
-```
-
-### Run
-
-```bash
 npm run dev
 ```
+
+The built-in setup wizard walks you through API key configuration on first run — no manual `.env` editing needed.
 
 ### Model Selection
 
