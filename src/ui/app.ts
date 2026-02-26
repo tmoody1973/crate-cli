@@ -43,7 +43,8 @@ export interface AppOptions {
 
 function addChildBeforeEditor(tui: TUI, child: any): void {
   const children = tui.children;
-  children.splice(children.length - 1, 0, child);
+  // Insert before the NowPlayingBar and Editor (last two children)
+  children.splice(children.length - 2, 0, child);
 }
 
 /** Map MCP tool names to friendly progress messages */
@@ -373,8 +374,10 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
       break;
     }
     case "clear": {
+      const npBar = tui.children[tui.children.length - 2];
       const editor = tui.children[tui.children.length - 1];
       tui.clear();
+      tui.addChild(npBar!);
       tui.addChild(editor!);
       tui.requestRender(true);
       break;
@@ -1000,13 +1003,14 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
     process.exit(0);
   });
 
-  // Now-playing bar (polls mpv, auto-shows/hides)
+  // Now-playing bar — added as a regular TUI child (not overlay) so it
+  // occupies real space and never paints over the Editor cursor.
   const nowPlayingBar = new NowPlayingBar();
   const nowPlayingPoller = new NowPlayingPoller(tui, nowPlayingBar);
-  nowPlayingPoller.start();
-
+  tui.addChild(nowPlayingBar);
   tui.addChild(editor);
   tui.setFocus(editor);
+  nowPlayingPoller.start();
 
   return tui;
 }

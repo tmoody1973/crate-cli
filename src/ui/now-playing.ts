@@ -189,17 +189,13 @@ export class NowPlayingPoller {
   }
 
   start(): void {
-    // Create overlay once — `visible` callback controls rendering without stealing focus
-    this.tui.showOverlay(this.component, {
-      anchor: "bottom-center",
-      width: "100%",
-      margin: { bottom: 1 }, // reserve space for Editor cursor row
-      visible: () => this.active,
-    });
+    // Component is added as a regular TUI child in app.ts (not an overlay)
+    // so it occupies real space and never paints over the Editor cursor.
 
     // Register immediate-hide callback for when mpv dies
     setOnPlayerStopped(() => {
       this.active = false;
+      this.component.setState({ ...EMPTY_STATE });
       this.tui.requestRender();
     });
 
@@ -214,6 +210,7 @@ export class NowPlayingPoller {
       this.interval = null;
     }
     this.active = false;
+    this.component.setState({ ...EMPTY_STATE });
     this.tui.requestRender();
   }
 
@@ -230,6 +227,7 @@ export class NowPlayingPoller {
       if (!isPlayerActive()) {
         if (this.active) {
           this.active = false;
+          this.component.setState({ ...EMPTY_STATE });
           this.tui.requestRender();
         }
         return;
