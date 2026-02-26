@@ -1,6 +1,6 @@
 {
   "name": "crate-cli",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "AI-powered music research agent for the terminal",
   "type": "module",
   "main": "dist/cli.js",
