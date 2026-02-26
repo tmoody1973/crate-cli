@@ -14,6 +14,7 @@ import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import * as cheerio from "cheerio";
 import RSSParser from "rss-parser";
+import { browserFetchHtml, isBrowserAvailable } from "./browser.js";
 
 const USER_AGENT = "Crate/1.0 (music-research-agent)";
 const FETCH_TIMEOUT_MS = 15_000;
@@ -55,6 +56,7 @@ function toolError(error: unknown): ToolResult {
 // ---------------------------------------------------------------------------
 
 export async function bandcampFetch(url: string, options?: { method?: string; body?: unknown }): Promise<string | null> {
+  const isSimpleGet = !options?.method && !options?.body;
   try {
     await rateLimit();
     const headers: Record<string, string> = { "User-Agent": USER_AGENT };
@@ -68,12 +70,18 @@ export async function bandcampFetch(url: string, options?: { method?: string; bo
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
       const resp = await fetch(url, { ...init, signal: controller.signal });
-      if (!resp.ok) return null;
+      if (!resp.ok) {
+        // HTTP failed — try cloud browser for GET requests (anti-bot bypass)
+        if (isSimpleGet) return await browserFetchHtml(url);
+        return null;
+      }
       return await resp.text();
     } finally {
       clearTimeout(timer);
     }
   } catch {
+    // Network error — try cloud browser for GET requests
+    if (isSimpleGet) return await browserFetchHtml(url);
     return null;
   }
 }
@@ -746,7 +754,17 @@ export async function getBandcampEditorialHandler(args: {
         throw new Error("URL must be a Bandcamp Daily article (https://daily.bandcamp.com/...)");
       }
 
-      const html = await bandcampFetch(args.url);
+      // Browser-first for Daily articles — JS rendering exposes richer content
+      // (embedded players, lazy-loaded images, full article body)
+      let html: string | null = null;
+      let usedBrowser = false;
+      if (isBrowserAvailable()) {
+        html = await browserFetchHtml(args.url);
+        if (html) usedBrowser = true;
+      }
+      if (!html) {
+        html = await bandcampFetch(args.url);
+      }
       if (!html) throw new Error(`Failed to fetch article: ${args.url}`);
 
       const $ = cheerio.load(html);
@@ -758,6 +776,9 @@ export async function getBandcampEditorialHandler(args: {
         || "Unknown";
       const date = $("meta[property='article:published_time']").attr("content")
         || undefined;
+      const description = $("meta[property='og:description']").attr("content")
+        || $("meta[name='description']").attr("content")
+        || undefined;
 
       let author: string | undefined;
       try {
@@ -768,15 +789,26 @@ export async function getBandcampEditorialHandler(args: {
         }
       } catch { /* JSON-LD optional */ }
 
-      // Body text from article paragraphs
+      // Body text — browser-rendered pages have richer content, allow more text
+      const maxBodyLength = usedBrowser ? 8000 : 4000;
       const paragraphs: string[] = [];
-      $("article p").each((_, el) => {
+
+      // Pull from article paragraphs, headings, and blockquotes for fuller content
+      $("article p, article h2, article h3, article blockquote").each((_, el) => {
+        const tag = el.type === "tag" ? el.tagName : "";
         const text = $(el).text().trim();
-        if (text) paragraphs.push(text);
+        if (!text) return;
+        if (tag === "h2" || tag === "h3") {
+          paragraphs.push(`## ${text}`);
+        } else if (tag === "blockquote") {
+          paragraphs.push(`> ${text}`);
+        } else {
+          paragraphs.push(text);
+        }
       });
       let bodyText = paragraphs.join("\n\n");
-      if (bodyText.length > 4000) {
-        bodyText = bodyText.slice(0, 4000) + " [truncated]";
+      if (bodyText.length > maxBodyLength) {
+        bodyText = bodyText.slice(0, maxBodyLength) + " [truncated]";
       }
 
       // Extract referenced Bandcamp releases
@@ -822,6 +854,18 @@ export async function getBandcampEditorialHandler(args: {
         }
       });
 
+      // Extract genre/style tags from article metadata (browser exposes more)
+      const tags: string[] = [];
+      $("meta[property='article:tag']").each((_, el) => {
+        const tag = $(el).attr("content");
+        if (tag) tags.push(tag);
+      });
+      // Also check inline tag links commonly found in Daily articles
+      $("a.tag, a[href*='/tag/']").each((_, el) => {
+        const tag = $(el).text().trim();
+        if (tag && !tags.includes(tag)) tags.push(tag);
+      });
+
       const releases = Array.from(releaseMap.values());
 
       return toolResult({
@@ -829,9 +873,12 @@ export async function getBandcampEditorialHandler(args: {
         url: args.url,
         ...(author && { author }),
         ...(date && { date }),
+        ...(description && { description }),
+        ...(tags.length > 0 && { tags }),
         body_text: bodyText,
         releases,
         release_count: releases.length,
+        fetched_via: usedBrowser ? "cloud_browser" : "http",
       });
     }
 
@@ -870,7 +917,8 @@ const getBandcampEditorial = tool(
   "get_bandcamp_editorial",
   "Access Bandcamp Daily editorial content — album reviews, features, interviews, and curated lists. " +
     "Without a URL: browse recent articles, optionally filtered by category. " +
-    "With a URL: read the full article with all referenced Bandcamp releases extracted.",
+    "With a URL: read the full article with all referenced Bandcamp releases extracted. " +
+    "Uses cloud browser when available for richer content (embedded players, full article text, genre tags).",
   {
     url: z.string().url().optional()
       .describe("Bandcamp Daily article URL to read. Omit to browse recent articles."),
@@ -881,10 +929,231 @@ const getBandcampEditorial = tool(
 );
 
 // ---------------------------------------------------------------------------
+// get_fan_collection handler
+// ---------------------------------------------------------------------------
+
+export async function getFanCollectionHandler(args: {
+  username: string;
+  include_wishlist?: boolean;
+}) {
+  try {
+    // Normalize: accept full URLs or plain usernames
+    let url: string;
+    if (args.username.startsWith("http")) {
+      url = args.username.replace(/\/$/, "");
+    } else {
+      url = `https://bandcamp.com/${args.username}`;
+    }
+
+    // Fan pages are JS-heavy — browser-first, HTTP fallback
+    let html: string | null = null;
+    let usedBrowser = false;
+    if (isBrowserAvailable()) {
+      html = await browserFetchHtml(url);
+      if (html) usedBrowser = true;
+    }
+    if (!html) {
+      html = await bandcampFetch(url);
+    }
+    if (!html) throw new Error(`Failed to fetch fan page: ${url}`);
+
+    const $ = cheerio.load(html);
+    const pagedata = extractPagedata(html);
+
+    // --- Fan profile info ---
+    const fanName =
+      pagedata?.fan_data?.name ??
+      ($("#fan-container .fan-bio-name, .fan-bio h1").first().text().trim() ||
+      args.username);
+    const fanBio =
+      pagedata?.fan_data?.bio ??
+      ($(".fan-bio .bio-text, .fan-bio-inner .bio-container").first().text().trim() ||
+      undefined);
+    const fanLocation =
+      pagedata?.fan_data?.location ??
+      ($(".fan-bio .location").first().text().trim() ||
+      undefined);
+    const fanPhoto =
+      pagedata?.fan_data?.photo?.image_id
+        ? `https://f4.bcbits.com/img/${pagedata.fan_data.photo.image_id}_0.jpg`
+        : $(".fan-photo img").attr("src") || undefined;
+    const fanUrl = pagedata?.fan_data?.trackpipe_url
+      ? `https://bandcamp.com${pagedata.fan_data.trackpipe_url}`
+      : url;
+
+    // --- Collection items ---
+    const collectionItems: Array<{
+      title: string;
+      artist: string;
+      url?: string;
+      art_url?: string;
+      item_type?: string;
+      added_date?: string;
+    }> = [];
+
+    // Pagedata approach: fan_data.collection_data contains collection items
+    const collectionData =
+      pagedata?.collection_data?.sequence ??
+      pagedata?.item_cache?.collection ??
+      null;
+
+    if (collectionData && typeof collectionData === "object") {
+      const items = Array.isArray(collectionData)
+        ? collectionData
+        : Object.values(collectionData);
+
+      for (const item of items) {
+        if (!item || typeof item !== "object") continue;
+        collectionItems.push({
+          title: item.album_title ?? item.title ?? item.item_title ?? "Unknown",
+          artist: item.band_name ?? item.artist ?? "Unknown",
+          url: item.item_url ?? item.bandcamp_url ?? undefined,
+          art_url: item.item_art_id
+            ? `https://f4.bcbits.com/img/a${item.item_art_id}_0.jpg`
+            : item.item_art_url ?? undefined,
+          item_type: item.tralbum_type === "a" ? "album" : item.tralbum_type === "t" ? "track" : item.item_type ?? undefined,
+          added_date: item.added ?? item.date_added ?? undefined,
+        });
+      }
+    }
+
+    // DOM fallback: scrape collection grid
+    if (collectionItems.length === 0) {
+      $(".collection-items .collection-item-container, #collection-items .collection-item-container").each((_, el) => {
+        const $el = $(el);
+        const title = $el.find(".collection-item-title").text().trim() ||
+                      $el.find(".item-link-alt .collection-title-details").text().trim();
+        const artist = $el.find(".collection-item-artist").text().trim().replace(/^by\s+/i, "") ||
+                       $el.find(".item-link-alt .collection-item-artist").text().trim().replace(/^by\s+/i, "");
+        const href = $el.find("a.item-link, a.item-link-alt").first().attr("href");
+        const imgSrc = $el.find("img.collection-item-art").attr("src") ?? "";
+        const artUrl = imgSrc && !imgSrc.includes("0.gif") ? imgSrc : undefined;
+
+        if (title || artist) {
+          collectionItems.push({
+            title: title || "Unknown",
+            artist: artist || "Unknown",
+            url: href || undefined,
+            art_url: artUrl,
+          });
+        }
+      });
+    }
+
+    // --- Wishlist items (optional) ---
+    let wishlistItems: typeof collectionItems | undefined;
+
+    if (args.include_wishlist) {
+      wishlistItems = [];
+
+      // Try pagedata wishlist
+      const wishData =
+        pagedata?.wishlist_data?.sequence ??
+        pagedata?.item_cache?.wishlist ??
+        null;
+
+      if (wishData && typeof wishData === "object") {
+        const items = Array.isArray(wishData)
+          ? wishData
+          : Object.values(wishData);
+
+        for (const item of items) {
+          if (!item || typeof item !== "object") continue;
+          wishlistItems.push({
+            title: item.album_title ?? item.title ?? item.item_title ?? "Unknown",
+            artist: item.band_name ?? item.artist ?? "Unknown",
+            url: item.item_url ?? item.bandcamp_url ?? undefined,
+            art_url: item.item_art_id
+              ? `https://f4.bcbits.com/img/a${item.item_art_id}_0.jpg`
+              : item.item_art_url ?? undefined,
+            item_type: item.tralbum_type === "a" ? "album" : item.tralbum_type === "t" ? "track" : item.item_type ?? undefined,
+            added_date: item.added ?? item.date_added ?? undefined,
+          });
+        }
+      }
+
+      // DOM fallback for wishlist
+      if (wishlistItems.length === 0) {
+        $(".wishlist-items .collection-item-container, #wishlist-items .collection-item-container").each((_, el) => {
+          const $el = $(el);
+          const title = $el.find(".collection-item-title").text().trim();
+          const artist = $el.find(".collection-item-artist").text().trim().replace(/^by\s+/i, "");
+          const href = $el.find("a.item-link, a.item-link-alt").first().attr("href");
+          const imgSrc = $el.find("img.collection-item-art").attr("src") ?? "";
+          const artUrl = imgSrc && !imgSrc.includes("0.gif") ? imgSrc : undefined;
+
+          if (title || artist) {
+            wishlistItems!.push({
+              title: title || "Unknown",
+              artist: artist || "Unknown",
+              url: href || undefined,
+              art_url: artUrl,
+            });
+          }
+        });
+      }
+    }
+
+    // --- Following (artists/labels) ---
+    const following: Array<{ name: string; url?: string }> = [];
+    const followData = pagedata?.following_data?.sequence ?? null;
+    if (followData && Array.isArray(followData)) {
+      for (const f of followData) {
+        if (!f || typeof f !== "object") continue;
+        following.push({
+          name: f.name ?? f.band_name ?? "Unknown",
+          url: f.url ?? f.item_url ?? undefined,
+        });
+      }
+    }
+
+    return toolResult({
+      fan: {
+        name: fanName,
+        url: fanUrl,
+        ...(fanLocation && { location: fanLocation }),
+        ...(fanBio && { bio: fanBio }),
+        ...(fanPhoto && { photo_url: fanPhoto }),
+      },
+      collection_count: collectionItems.length,
+      collection: collectionItems,
+      ...(wishlistItems && {
+        wishlist_count: wishlistItems.length,
+        wishlist: wishlistItems,
+      }),
+      ...(following.length > 0 && {
+        following_count: following.length,
+        following,
+      }),
+      fetched_via: usedBrowser ? "cloud_browser" : "http",
+    });
+  } catch (error) {
+    return toolError(error);
+  }
+}
+
+const getFanCollection = tool(
+  "get_fan_collection",
+  "Explore a Bandcamp fan's profile — their purchased collection, wishlist, and followed artists/labels. " +
+    "Accepts a Bandcamp username (e.g., 'tarik') or full profile URL. " +
+    "Uses cloud browser when available for complete collection loading (fan pages are JS-heavy). " +
+    "Great for understanding listener taste, discovering curated selections, and finding scene connections.",
+  {
+    username: z.string().describe(
+      "Bandcamp username or full profile URL (e.g., 'tarik' or 'https://bandcamp.com/tarik')"
+    ),
+    include_wishlist: z.boolean().optional().default(false).describe(
+      "Also include the fan's wishlist items (default: false)"
+    ),
+  },
+  getFanCollectionHandler,
+);
+
+// ---------------------------------------------------------------------------
 // Server export
 // ---------------------------------------------------------------------------
 
-export const bandcampTools = [searchBandcamp, getArtistPage, getAlbum, getArtistTracks, discoverMusic, getTagInfo, getBandcampEditorial];
+export const bandcampTools = [searchBandcamp, getArtistPage, getAlbum, getArtistTracks, discoverMusic, getTagInfo, getBandcampEditorial, getFanCollection];
 
 export const bandcampServer = createSdkMcpServer({
   name: "bandcamp",

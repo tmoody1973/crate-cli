@@ -139,7 +139,7 @@ See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep
 |--------|-------|------------------|
 | **MusicBrainz** | 6 (artist, release, recording search + details) | No |
 | **Wikipedia** | 3 (search, summary, full article) | No |
-| **Bandcamp** | 7 (search, artist, album, artist tracks, discover + location, tags, editorial) | No |
+| **Bandcamp** | 8 (search, artist, album, artist tracks, discover + location, tags, editorial) | No |
 | **YouTube** | 4 (search, play track, play playlist, player control) | No* |
 | **Radio Browser** | 4 (search, browse, tags, play station) | No |
 | **News / RSS** | 3 (search news, latest reviews, list sources) | No |
@@ -151,6 +151,7 @@ See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep
 | **Influence Network** | 4 (search reviews, extract influences, trace path, bridge artists) | Yes* |
 | **Telegraph** | 5 (setup page, post, view page, list entries, delete entry) | No |
 | **Tumblr** | 5 (connect, post, blog info, disconnect, status) | Yes |
+| **Browser** | 2 (browse URL, screenshot page) | Yes |
 
 MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, Influence Cache, and Telegraph are always available — no API keys needed. The others activate automatically when you provide their API keys.
 
@@ -162,7 +163,7 @@ Wikipedia supports optional [Wikimedia Enterprise](https://enterprise.wikimedia.
 
 ## Tools Reference
 
-Crate's agent has access to **82 tools** across 15 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
+Crate's agent has access to **95 tools** across 18 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
 
 ### MusicBrainz (always available)
 
@@ -360,6 +361,17 @@ To set up Tumblr publishing:
 2. Set `TUMBLR_CONSUMER_KEY` and `TUMBLR_CONSUMER_SECRET` in your `.env`
 3. In Crate, ask the agent to connect to Tumblr — it will open your browser for OAuth authorization
 
+### Browser (requires `KERNEL_API_KEY`)
+
+Cloud browser powered by [Kernel.sh](https://onkernel.com/) for reading full articles, scraping dynamic pages, and capturing screenshots from sources that block simple HTTP requests (Pitchfork, RateYourMusic, Resident Advisor, etc.).
+
+| Tool | What it does |
+|------|-------------|
+| `browse_url` | Navigate to a URL and extract page content — article text, title, and metadata |
+| `screenshot_url` | Take a screenshot of a web page, full page or specific CSS selector |
+
+The agent automatically uses the browser as a fallback when standard HTTP fetches fail due to anti-bot protection or JavaScript-rendered content.
+
 ## Quick Start
 
 ### Prerequisites
@@ -417,7 +429,7 @@ npx tsx src/cli.ts --model sonnet
 
 ## MCP Server Mode
 
-Crate can run as a standard [MCP](https://modelcontextprotocol.io/) stdio server, exposing all 84+ music research tools to any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and more.
+Crate can run as a standard [MCP](https://modelcontextprotocol.io/) stdio server, exposing all 95 music research tools to any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and more.
 
 ```bash
 # Via CLI flag
@@ -484,6 +496,12 @@ Type `/` to see all commands in the autocomplete dropdown.
 
 A now-playing bar auto-appears at the bottom of the terminal during playback, showing track info, progress, and volume.
 
+### News
+
+| Command | Description |
+|---------|-------------|
+| `/news [count]` | Generate daily music news segment (1–5 stories) |
+
 ### Session
 
 | Command | Description |
@@ -511,6 +529,7 @@ A now-playing bar auto-appears at the bottom of the terminal during playback, sh
 | `YOUTUBE_API_KEY` | YouTube Data API key (enhances search) | No |
 | `TUMBLR_CONSUMER_KEY` | Tumblr OAuth consumer key | No |
 | `TUMBLR_CONSUMER_SECRET` | Tumblr OAuth consumer secret | No |
+| `KERNEL_API_KEY` | Cloud browser for anti-bot bypass ([Kernel.sh](https://onkernel.com/)) | No |
 | `TICKETMASTER_API_KEY` | Live event and concert discovery | No |
 
 All keys can be managed interactively from within Crate using the `/keys` command — no need to edit `.env` manually.
@@ -533,7 +552,7 @@ crate-cli/
 │   │   ├── genius.ts          # Genius MCP server (6 tools)
 │   │   ├── lastfm.ts          # Last.fm MCP server (8 tools)
 │   │   ├── wikipedia.ts       # Wikipedia MCP server (3 tools)
-│   │   ├── bandcamp.ts        # Bandcamp MCP server (7 tools)
+│   │   ├── bandcamp.ts        # Bandcamp MCP server (8 tools)
 │   │   ├── youtube.ts         # YouTube player MCP server (4 tools)
 │   │   ├── radio.ts           # Radio Browser MCP server (4 tools)
 │   │   ├── news.ts            # News / RSS MCP server (3 tools, 10 feeds)
@@ -542,6 +561,7 @@ crate-cli/
 │   │   ├── influence-cache.ts # Influence cache MCP server (8 tools, local SQLite)
 │   │   ├── telegraph.ts       # Telegraph publishing (5 tools, anonymous pages)
 │   │   ├── tumblr.ts          # Tumblr publishing (5 tools, OAuth 1.0a, NPF)
+│   │   ├── browser.ts         # Cloud browser (2 tools, Kernel.sh + Playwright)
 │   │   ├── collection.ts      # Local collection manager (SQLite)
 │   │   ├── playlist.ts        # Playlist manager (SQLite)
 │   │   └── memory.ts          # Mem0 persistent memory

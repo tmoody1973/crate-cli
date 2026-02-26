@@ -1,6 +1,6 @@
 {
   "name": "crate-cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AI-powered music research agent for the terminal",
   "type": "module",
   "main": "dist/cli.js",
@@ -33,12 +33,14 @@
     "@anthropic-ai/claude-agent-sdk": "^0.2.49",
     "@mariozechner/pi-tui": "^0.54.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "@onkernel/sdk": "^0.39.0",
     "better-sqlite3": "^12.6.2",
     "boxen": "^8.0.1",
     "chalk": "^5.6.2",
     "cheerio": "^1.2.0",
     "dotenv": "^17.3.1",
     "mem0ai": "^2.2.3",
+    "playwright-core": "^1.58.2",
     "rss-parser": "^3.13.0",
     "zod": "^4.3.6"
   },

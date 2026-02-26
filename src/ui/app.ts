@@ -269,6 +269,12 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Loading your published entries...";
     case "delete_entry":
       return "Removing entry from your page...";
+
+    case "browse_url":
+      return `Reading ${input.url ? new URL(input.url).hostname : "page"}...`;
+    case "screenshot_url":
+      return `Capturing screenshot of ${input.url ? new URL(input.url).hostname : "page"}...`;
+
     default:
       return `Using ${bare.replace(/_/g, " ")}...`;
   }
@@ -293,6 +299,7 @@ const SERVER_LABELS: Record<string, string> = {
   memory: "Memory",
   telegraph: "Telegraph",
   tumblr: "Tumblr",
+  browser: "Browser",
 };
 
 /** Extract the server name from a fully-qualified MCP tool name. */
