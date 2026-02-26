@@ -319,7 +319,7 @@ function buildProgressMessage(
   return parts.join(chalk.dim(" \u00B7 "));
 }
 
-async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: string): Promise<void> {
+async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: string): Promise<string | void> {
   const parts = input.slice(1).split(/\s+/);
   const command = parts[0]?.toLowerCase();
   const arg = parts[1];
@@ -643,6 +643,27 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
       tui.requestRender();
       break;
     }
+    case "news": {
+      // Parse optional story count: /news 3, /news 5, etc.
+      const count = arg ? Math.min(Math.max(parseInt(arg, 10) || 5, 1), 5) : 5;
+      const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const day = days[new Date().getDay()];
+
+      return [
+        `Generate a Radio Milwaukee daily music news segment for ${day}.`,
+        `Find ${count} current music stories from TODAY or the past 24-48 hours.`,
+        ``,
+        `RESEARCH STEPS:`,
+        `1. Use search_music_news to scan RSS feeds for breaking stories`,
+        `2. Use search_web (Tavily, topic="news", time_range="day") to find additional breaking music news not in RSS`,
+        `3. Use search_web (Exa) for any trending music stories or scene coverage the keyword search missed`,
+        `4. Cross-reference and pick the ${count} most compelling, newsworthy stories`,
+        `5. For each story, verify facts using available tools (MusicBrainz, Discogs, Bandcamp, etc.)`,
+        ``,
+        `FORMAT — follow the Music News Segment Format rules in your instructions exactly.`,
+        `Output "For ${day}:" then ${count} numbered stories with source citations.`,
+      ].join("\n");
+    }
     case "keys": {
       showKeysPanel(tui, agent!);
       break;
@@ -712,6 +733,8 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
     // Social
     { name: "mypage", description: "Your Crate social page URL & recent entries" },
     { name: "entries", description: "List published entries (/entries [category])" },
+    // News
+    { name: "news", description: "Generate daily music news segment (/news [count])" },
     // Session
     { name: "help", description: "Show available commands" },
     { name: "model", description: "Show or switch model (sonnet, opus, haiku)" },
@@ -734,9 +757,17 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
     if (!trimmed || isProcessing) return;
 
     // Handle slash commands locally
+    var effectivePrompt: string;
+    var displayText: string;
     if (trimmed.startsWith("/")) {
-      await handleSlashCommand(tui, currentAgent, trimmed);
-      return;
+      const result = await handleSlashCommand(tui, currentAgent, trimmed);
+      if (typeof result !== "string") return;  // void = handled internally
+      // Synthetic prompt — show the slash command, send the prompt to the agent
+      effectivePrompt = result;
+      displayText = trimmed;
+    } else {
+      effectivePrompt = trimmed;
+      displayText = trimmed;
     }
 
     // Guard: agent must exist before chatting
@@ -756,7 +787,7 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
     // Show user message
     addChildBeforeEditor(
       tui,
-      new Text(chalk.bold.white("> ") + trimmed, 1, 0),
+      new Text(chalk.bold.white("> ") + displayText, 1, 0),
     );
 
     // Show loader while agent works
@@ -857,7 +888,7 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
     }
 
     try {
-      for await (const msg of currentAgent.chat(trimmed)) {
+      for await (const msg of currentAgent.chat(effectivePrompt)) {
         if (aborted) break;
 
         if (msg.type === "assistant") {
