@@ -133,6 +133,57 @@ Found 8 co-mentions with influence context:
 
 See **[docs/INFLUENCE-NETWORK.md](docs/INFLUENCE-NETWORK.md)** for the full deep-dive.
 
+## Research Skills
+
+Crate includes specialized research workflows that activate automatically based on your query. Each skill is defined in a `SKILL.md` file with triggers, tool priorities, and step-by-step methodology — loaded on demand to keep the base prompt lean.
+
+| Skill | Triggers | What it does |
+|-------|----------|-------------|
+| **Artist Deep Dive** | "deep dive", "tell me everything about" | Full artist profile: bio, discography, credits, influences, scene context |
+| **Sample Archaeology** | "sample", "sampled", "who sampled" | Trace sample chains across records — originals, interpolations, production lineage |
+| **Scene Mapping** | "scene map", "music scene in" | Map a geographic music scene: key artists, venues, labels, timeline |
+| **Vinyl Valuation** | "vinyl value", "first pressing", "matrix number" | Pressing identification and market valuation via Discogs and MusicBrainz |
+
+Skills are extensible — add a new folder under `src/skills/` with a `SKILL.md` file and it's automatically discovered.
+
+## Task Planning
+
+For complex research queries, Crate automatically decomposes your question into 3–7 concrete research tasks before execution. The plan is displayed immediately so you can see what's coming:
+
+```
+> Map the Detroit-Berlin techno connection from the late 80s to today
+
+Research plan:
+  ○ Search MusicBrainz for key Detroit techno originators (Juan Atkins, Derrick May, Kevin Saunderson)
+  ○ Search for Berlin techno labels and artists from early 90s (Tresor, Basic Channel)
+  ○ Trace influence paths between Detroit and Berlin artists
+  ○ Find bridge artists who operated in both scenes
+  ○ Build timeline of key releases and events
+  ○ Synthesize connections and present narrative
+```
+
+Planning is skipped for simple queries (greetings, short questions) to avoid unnecessary latency.
+
+## Scratchpad
+
+Every research session is logged as JSONL at `~/.crate/scratchpad/`. Each file records queries, tool calls with durations, plans, and answers — useful for debugging, reviewing past research, and understanding how Crate arrived at its conclusions.
+
+```bash
+# View recent session files
+ls ~/.crate/scratchpad/
+
+# Inspect a session
+cat ~/.crate/scratchpad/2026-03-08-143025_a1b2c3d4.jsonl | jq .
+```
+
+Sessions auto-rotate, keeping the 50 most recent files.
+
+## SOUL.md
+
+Crate's personality and research values are defined in [`SOUL.md`](SOUL.md) at the project root. This file is loaded at startup and prepended to the system prompt, giving the agent its identity: the precision of a record store clerk combined with the global curiosity of a Gilles Peterson broadcast.
+
+Edit `SOUL.md` to customize how Crate thinks about music, what it values in research, and how it presents findings.
+
 ## Data Sources
 
 | Source | Tools | API Key Required |
@@ -538,12 +589,14 @@ All keys can be managed interactively from within Crate using the `/keys` comman
 
 ```
 crate-cli/
+├── SOUL.md                    # Agent identity and values
 ├── src/
 │   ├── cli.ts                 # Entry point, arg parsing
 │   ├── mcp-server.ts          # MCP stdio server entry point
 │   ├── agent/
 │   │   ├── index.ts           # CrateAgent class (wraps Claude Agent SDK)
-│   │   └── system-prompt.ts   # Agent personality and tool docs
+│   │   ├── events.ts          # CrateEvent union type (typed event stream)
+│   │   └── system-prompt.ts   # Loads SOUL.md + tool docs
 │   ├── servers/
 │   │   ├── index.ts           # Server registry (key-gated activation)
 │   │   ├── tool-registry.ts   # Tool aggregator for MCP server mode
@@ -565,6 +618,12 @@ crate-cli/
 │   │   ├── collection.ts      # Local collection manager (SQLite)
 │   │   ├── playlist.ts        # Playlist manager (SQLite)
 │   │   └── memory.ts          # Mem0 persistent memory
+│   ├── skills/
+│   │   ├── registry.ts        # SkillRegistry — loads SKILL.md workflows on demand
+│   │   ├── artist-deep-dive/  # Deep artist research methodology
+│   │   ├── sample-archaeology/# Sample chain tracing workflow
+│   │   ├── scene-mapping/     # Geographic scene exploration
+│   │   └── vinyl-valuation/   # Pressing ID and market valuation
 │   ├── ui/
 │   │   ├── app.ts             # TUI setup, slash commands, progress display
 │   │   ├── components.ts      # Themes, banner, hyperlinks
@@ -577,6 +636,7 @@ crate-cli/
 │       ├── env.ts             # .env file read/write utilities
 │       ├── hints.ts           # Contextual hint engine
 │       ├── player.ts          # Shared mpv player infrastructure
+│       ├── scratchpad.ts      # Per-session JSONL audit trail (~/.crate/scratchpad/)
 │       └── viz.ts             # Terminal visualizations (influence paths, charts)
 ├── tests/
 ├── docs/                      # Design docs and plans
@@ -589,8 +649,12 @@ crate-cli/
 | Layer | Technology |
 |-------|------------|
 | AI Agent | [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk) |
+| Event System | Typed `CrateEvent` union — `AsyncGenerator<CrateEvent>` stream |
 | Terminal UI | [pi-tui](https://github.com/nicfontaine/pi-tui) |
 | Tool Protocol | [MCP](https://modelcontextprotocol.io/) (in-process servers) |
+| Research Skills | `SKILL.md` workflows loaded on demand via `SkillRegistry` |
+| Identity | `SOUL.md` — agent personality loaded at startup |
+| Audit Trail | Per-session JSONL scratchpad (`~/.crate/scratchpad/`) |
 | Audio | [mpv](https://mpv.io/) via IPC + [yt-dlp](https://github.com/yt-dlp/yt-dlp) |
 | Language | TypeScript (ES2022, strict) |
 | Runtime | Node.js via tsx |
