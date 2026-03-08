@@ -721,7 +721,6 @@ async function handleResearchStream(
   let loaderRemoved = false;
   const sourcesUsed = new Set<string>();
   const toolsUsed: string[] = [];
-  let toolCallCount = 0;
   const queryStartTime = Date.now();
   let aborted = false;
 
@@ -775,8 +774,12 @@ async function handleResearchStream(
       if (aborted) break;
 
       switch (event.type) {
+        case "thinking": {
+          // Thinking events are internal — no UI rendering needed
+          break;
+        }
+
         case "tool_start": {
-          toolCallCount++;
           const bare = event.tool;
           if (!toolsUsed.includes(bare)) toolsUsed.push(bare);
           sourcesUsed.add(event.server);

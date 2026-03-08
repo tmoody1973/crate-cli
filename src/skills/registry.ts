@@ -74,8 +74,19 @@ export class SkillRegistry {
 
   /** Scan src/skills/ subdirectories for SKILL.md files and parse frontmatter + body. */
   async loadAll(): Promise<void> {
+    this.skills = []; // Clear to ensure idempotency
+
+    // Resolve skills directory — check src/ first (dev), fall back to dist location
     const thisFile = fileURLToPath(import.meta.url);
-    const skillsDir = dirname(thisFile);
+    const compiledDir = dirname(thisFile);
+    const srcDir = join(compiledDir, "..", "..", "src", "skills");
+    let skillsDir: string;
+    try {
+      readdirSync(srcDir);
+      skillsDir = srcDir;
+    } catch {
+      skillsDir = compiledDir;
+    }
 
     let entries: string[];
     try {
@@ -116,17 +127,22 @@ export class SkillRegistry {
     }
   }
 
-  /** Case-insensitive trigger matching against the user's query. */
+  /** Case-insensitive trigger matching against the user's query. Longest trigger wins to avoid false matches. */
   matchQuery(query: string): Skill | null {
     const lower = query.toLowerCase();
+    let bestMatch: Skill | null = null;
+    let bestLength = 0;
+
     for (const skill of this.skills) {
       for (const trigger of skill.triggers) {
-        if (lower.includes(trigger.toLowerCase())) {
-          return skill;
+        const triggerLower = trigger.toLowerCase();
+        if (lower.includes(triggerLower) && triggerLower.length > bestLength) {
+          bestMatch = skill;
+          bestLength = triggerLower.length;
         }
       }
     }
-    return null;
+    return bestMatch;
   }
 
   /** List all loaded skills — for /help output. */

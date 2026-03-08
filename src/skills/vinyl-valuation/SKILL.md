@@ -3,13 +3,14 @@ name: vinyl-valuation
 description: Vinyl record identification and market valuation — pressing details, matrix numbers, price comparison across markets
 triggers:
   - "vinyl value"
-  - "how much is"
-  - "worth"
-  - "pressing"
+  - "how much is this record"
+  - "record worth"
+  - "vinyl worth"
   - "matrix number"
-  - "first press"
-  - "original press"
-  - "valuation"
+  - "first pressing"
+  - "original pressing"
+  - "vinyl valuation"
+  - "record valuation"
 tools_priority: [discogs, musicbrainz, websearch]
 ---
 

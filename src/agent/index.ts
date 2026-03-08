@@ -15,13 +15,14 @@ const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
 /** Extract server name from a fully-qualified MCP tool name like mcp__musicbrainz__get_artist */
 function serverFromToolName(toolName: string): string {
-  const match = toolName.match(/^mcp__([^_]+)__/);
-  return match?.[1] ?? "unknown";
+  const parts = toolName.split("__");
+  return parts.length >= 3 ? (parts[1] ?? "unknown") : "unknown";
 }
 
 /** Strip the mcp__{server}__ prefix to get the bare tool name. */
 function bareToolName(toolName: string): string {
-  return toolName.replace(/^mcp__[^_]+__/, "");
+  const parts = toolName.split("__");
+  return parts.length >= 3 ? parts.slice(2).join("__") : toolName;
 }
 
 export class CrateAgent {
@@ -34,14 +35,18 @@ export class CrateAgent {
   private systemPromptSuffix?: string;
   private conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [];
   private skillRegistry = new SkillRegistry();
-  private skillsLoaded = false;
-  private scratchpad: Scratchpad;
+  private skillsLoadedPromise?: Promise<void>;
+  private scratchpad: Scratchpad | null;
 
   constructor(model?: string) {
     this.model = model ?? DEFAULT_MODEL;
     this.servers = getActiveServers();
     this.memoryEnabled = !!process.env.MEM0_API_KEY;
-    this.scratchpad = new Scratchpad();
+    try {
+      this.scratchpad = new Scratchpad();
+    } catch {
+      this.scratchpad = null;
+    }
   }
 
   get activeModel(): string {
@@ -73,12 +78,12 @@ export class CrateAgent {
     this.systemPromptSuffix = suffix;
   }
 
-  /** Ensure skills are loaded (idempotent). */
+  /** Ensure skills are loaded (idempotent, race-safe). */
   private async ensureSkillsLoaded(): Promise<void> {
-    if (!this.skillsLoaded) {
-      await this.skillRegistry.loadAll();
-      this.skillsLoaded = true;
+    if (!this.skillsLoadedPromise) {
+      this.skillsLoadedPromise = this.skillRegistry.loadAll();
     }
+    await this.skillsLoadedPromise;
   }
 
   /** List available research skills. */
@@ -104,7 +109,7 @@ export class CrateAgent {
 
   /** Save conversation to Mem0 at session end and close scratchpad. */
   async endSession(): Promise<void> {
-    this.scratchpad.close();
+    this.scratchpad?.close();
     if (!this.memoryEnabled || this.conversationHistory.length < 6) return;
     try {
       const recent = this.conversationHistory.slice(-20);
@@ -141,6 +146,13 @@ export class CrateAgent {
               responseText += block.text as string;
             }
           }
+        }
+        // Track planning cost
+        if (
+          msg.type === "result" &&
+          (msg as Record<string, unknown>).subtype === "success"
+        ) {
+          this.totalCostUsd += ((msg as Record<string, unknown>).total_cost_usd as number) ?? 0;
         }
       }
 
@@ -186,7 +198,7 @@ export class CrateAgent {
       yield { type: "plan", tasks: researchPlan.tasks };
 
       // Write plan to scratchpad
-      this.scratchpad.write({
+      this.scratchpad?.write({
         type: "plan",
         tasks: researchPlan.tasks.map((t) => ({ id: t.id, description: t.description })),
         timestamp: new Date().toISOString(),
@@ -214,7 +226,7 @@ export class CrateAgent {
     });
 
     // Write query to scratchpad
-    this.scratchpad.write({
+    this.scratchpad?.write({
       type: "query",
       text: userMessage,
       timestamp: new Date().toISOString(),
@@ -226,8 +238,8 @@ export class CrateAgent {
     let assistantText = "";
     let answerStarted = false;
 
-    // Track in-flight tool calls for duration measurement
-    const toolStartTimes = new Map<string, number>();
+    // Track in-flight tool calls by SDK block ID for accurate duration measurement
+    const toolStartTimes = new Map<string, { bare: string; server: string; startedAt: number }>();
 
     try {
       for await (const message of stream) {
@@ -255,6 +267,7 @@ export class CrateAgent {
           for (const block of blocks) {
             if (block.type === "tool_use") {
               const fullName = block.name as string;
+              const blockId = (block.id as string) ?? fullName;
               const bare = bareToolName(fullName);
               const server = serverFromToolName(fullName);
               const input = block.input ?? {};
@@ -263,7 +276,7 @@ export class CrateAgent {
               if (!toolsUsed.includes(bare)) {
                 toolsUsed.push(bare);
               }
-              toolStartTimes.set(bare, Date.now());
+              toolStartTimes.set(blockId, { bare, server, startedAt: Date.now() });
 
               yield { type: "tool_start", tool: bare, server, input };
             }
@@ -280,21 +293,20 @@ export class CrateAgent {
           }
         }
 
-        // Tool results come back as tool_result in user messages from the SDK
-        // We detect tool_end by watching for the next tool_use or text after a tool_start
-        // Since the SDK doesn't emit explicit tool-result events in the stream,
-        // we emit tool_end when we see a tool_use_summary message
+        // Tool results — emit tool_end when we see a tool_use_summary message
         if (message.type === "tool_use_summary") {
           const summary = message as Record<string, unknown>;
+          const toolUseId = (summary.tool_use_id ?? "") as string;
           const fullName = (summary.tool_name ?? "") as string;
           const bare = bareToolName(fullName);
           const server = serverFromToolName(fullName);
-          const startedAt = toolStartTimes.get(bare);
-          const durationMs = startedAt ? Date.now() - startedAt : 0;
-          toolStartTimes.delete(bare);
+
+          const tracked = toolStartTimes.get(toolUseId);
+          const durationMs = tracked ? Date.now() - tracked.startedAt : 0;
+          toolStartTimes.delete(toolUseId);
 
           // Write tool call to scratchpad
-          this.scratchpad.write({
+          this.scratchpad?.write({
             type: "tool_call",
             tool: bare,
             server,
@@ -312,9 +324,8 @@ export class CrateAgent {
     }
 
     // Flush any remaining in-flight tools (SDK didn't emit summary for them)
-    for (const [bare, startedAt] of toolStartTimes) {
-      const server = "unknown";
-      yield { type: "tool_end", tool: bare, server, durationMs: Date.now() - startedAt };
+    for (const [, tracked] of toolStartTimes) {
+      yield { type: "tool_end", tool: tracked.bare, server: tracked.server, durationMs: Date.now() - tracked.startedAt };
     }
     toolStartTimes.clear();
 
@@ -323,7 +334,7 @@ export class CrateAgent {
 
     // Write answer to scratchpad
     if (assistantText) {
-      this.scratchpad.write({
+      this.scratchpad?.write({
         type: "answer",
         text: assistantText.slice(0, 2000), // Truncate to keep files manageable
         totalMs,
