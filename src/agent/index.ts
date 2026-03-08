@@ -192,8 +192,9 @@ export class CrateAgent {
       systemPrompt = `${systemPrompt}\n\n## Active Research Skill: ${matchedSkill.name}\n${matchedSkill.instructions}`;
     }
 
-    // Task planning pre-pass — decompose query into research steps
-    const researchPlan = await this.plan(userMessage);
+    // Task planning pre-pass — only for substantive research queries
+    const needsPlan = userMessage.split(/\s+/).length >= 4 && !/^(who|what) are you/i.test(userMessage) && !/^(hey|hi|hello|help|thanks)/i.test(userMessage);
+    const researchPlan = needsPlan ? await this.plan(userMessage) : null;
     if (researchPlan) {
       yield { type: "plan", tasks: researchPlan.tasks };
 
