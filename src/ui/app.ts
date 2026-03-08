@@ -11,6 +11,7 @@ import {
 import type { SlashCommand } from "@mariozechner/pi-tui";
 import chalk from "chalk";
 import { CrateAgent } from "../agent/index.js";
+import type { CrateEvent } from "../agent/events.js";
 import { markdownTheme, editorTheme, WELCOME_TEXT, HELP_TEXT } from "./components.js";
 import { getServerStatus } from "../servers/index.js";
 import { NowPlayingBar, NowPlayingPoller } from "./now-playing.js";
@@ -41,18 +42,15 @@ export interface AppOptions {
   model?: string;
 }
 
-function addChildBeforeEditor(tui: TUI, child: any): void {
+function addChildBeforeEditor(tui: TUI, child: { render(width: number): string[]; invalidate(): void }): void {
   const children = tui.children;
   // Insert before the NowPlayingBar and Editor (last two children)
   children.splice(children.length - 2, 0, child);
 }
 
 /** Map MCP tool names to friendly progress messages */
-function getToolProgressMessage(toolName: string, input: Record<string, any>): string {
-  // Strip mcp__<server>__ prefix to get the bare tool name
-  const bare = toolName.replace(/^mcp__[^_]+__/, "");
-
-  switch (bare) {
+function getToolProgressMessage(toolName: string, input: Record<string, unknown>): string {
+  switch (toolName) {
     case "search_artist":
       return `Searching for artist "${input.query}"...`;
     case "get_artist":
@@ -69,7 +67,6 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
         : `Searching for "${input.query}"...`;
     case "get_recording_credits":
       return "Fetching recording credits...";
-    // Discogs tools
     case "search_discogs":
       return `Searching Discogs for "${input.query}"...`;
     case "get_artist_discogs":
@@ -88,7 +85,6 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Fetching full release details from Discogs...";
     case "get_marketplace_stats":
       return "Fetching marketplace pricing from Discogs...";
-    // Genius tools
     case "search_songs":
       return `Searching Genius for "${input.query}"...`;
     case "get_song":
@@ -101,14 +97,12 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Fetching artist songs from Genius...";
     case "get_annotation":
       return "Fetching annotation details from Genius...";
-    // Wikipedia tools
     case "search_articles":
       return `Searching Wikipedia for "${input.query}"...`;
     case "get_summary":
       return `Getting Wikipedia summary for "${input.title}"...`;
     case "get_article":
       return `Reading full Wikipedia article for "${input.title}"...`;
-    // Bandcamp tools
     case "search_bandcamp":
       return input?.location
         ? `Searching Bandcamp for "${input?.query ?? "music"}" in ${input.location}...`
@@ -129,16 +123,14 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return input?.url
         ? "Reading Bandcamp Daily article..."
         : `Browsing Bandcamp Daily${input?.category ? ` ${input.category}` : ""}...`;
-    // YouTube tools
     case "search_tracks":
       return `Searching YouTube for "${input?.query ?? "music"}"...`;
     case "play_track":
       return input?.url ? "Playing track from YouTube..." : `Playing "${input?.query}"...`;
     case "play_playlist":
-      return `Playing ${input?.tracks?.length ?? 0} tracks...`;
+      return `Playing ${(input?.tracks as unknown[])?.length ?? 0} tracks...`;
     case "player_control":
       return input?.action === "now_playing" ? "Checking what's playing..." : `Player: ${input?.action}...`;
-    // Radio tools
     case "search_radio":
       return `Searching radio stations for "${input?.query ?? input?.tag ?? "stations"}"...`;
     case "browse_radio":
@@ -151,7 +143,6 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return input?.name
         ? `Tuning in to "${input.name}"...`
         : "Starting radio stream...";
-    // Last.fm tools
     case "get_artist_info":
       return `Looking up Last.fm stats for "${input.artist}"...`;
     case "get_album_info":
@@ -168,7 +159,6 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Fetching top "${input.tag}" artists from Last.fm...`;
     case "get_geo_top_tracks":
       return `Fetching top tracks in ${input.country} from Last.fm...`;
-    // Collection tools
     case "collection_add":
       return `Adding "${input.title}" by ${input.artist} to collection...`;
     case "collection_search":
@@ -183,7 +173,6 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Getting collection stats...";
     case "collection_tags":
       return "Fetching collection tags...";
-    // Playlist tools
     case "playlist_create":
       return `Creating playlist "${input.name}"...`;
     case "playlist_add_track":
@@ -198,47 +187,42 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return `Exporting playlist as ${input.format ?? "markdown"}...`;
     case "playlist_delete":
       return "Deleting playlist...";
-    // Web Search tools
     case "search_web":
       return `Searching web for "${input?.query ?? "music"}"${input?.provider === "exa" ? " (neural)" : ""}...`;
     case "find_similar":
       return `Finding pages similar to ${input?.url ?? "URL"}...`;
     case "extract_content":
-      return `Extracting content from ${input?.urls?.length ?? 1} URL(s)...`;
-    // Influence network tools
+      return `Extracting content from ${(input?.urls as unknown[])?.length ?? 1} URL(s)...`;
     case "search_reviews":
-      return `🔍 Searching music publications for "${input?.artist ?? "artist"}"${input?.album ? ` — ${input.album}` : ""}…`;
+      return `Searching music publications for "${input?.artist ?? "artist"}"${input?.album ? ` — ${input.album}` : ""}...`;
     case "extract_influences":
-      return `🧬 Extracting co-mentions & influence signals from review text…`;
+      return `Extracting co-mentions & influence signals from review text...`;
     case "trace_influence_path":
-      return `🔗 Tracing influence path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}  ⟨multi-step⟩`;
+      return `Tracing influence path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}...`;
     case "find_bridge_artists":
-      return `🌉 Finding bridge artists: ${input?.genre_a ?? "?"} ↔ ${input?.genre_b ?? "?"}  ⟨multi-step⟩`;
-    // Influence cache tools
+      return `Finding bridge artists: ${input?.genre_a ?? "?"} ↔ ${input?.genre_b ?? "?"}...`;
     case "cache_influence":
-      return `💾 Caching: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}…`;
+      return `Caching: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}...`;
     case "cache_batch_influences":
-      return `💾 Caching ${input?.edges?.length ?? 0} influence edges…`;
+      return `Caching ${(input?.edges as unknown[])?.length ?? 0} influence edges...`;
     case "lookup_influences":
-      return `🔎 Looking up cached influences for "${input?.artist ?? "?"}"…`;
+      return `Looking up cached influences for "${input?.artist ?? "?"}"...`;
     case "find_cached_path":
-      return `🗺️ Finding cached path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}…`;
+      return `Finding cached path: ${input?.from_artist ?? "?"} → ${input?.to_artist ?? "?"}...`;
     case "search_cached_artists":
-      return `🔎 Searching cached artists for "${input?.query ?? "?"}"…`;
+      return `Searching cached artists for "${input?.query ?? "?"}"...`;
     case "influence_graph_stats":
-      return "📊 Getting influence graph stats…";
+      return "Getting influence graph stats...";
     case "add_artist_alias":
-      return `🏷️ Adding alias: "${input?.alias ?? "?"}" → "${input?.artist_name ?? "?"}"…`;
+      return `Adding alias: "${input?.alias ?? "?"}" → "${input?.artist_name ?? "?"}"...`;
     case "remove_cached_edge":
-      return `🗑️ Removing cached edge #${input?.edge_id ?? "?"}…`;
-    // News / RSS tools
+      return `Removing cached edge #${input?.edge_id ?? "?"}...`;
     case "search_music_news":
       return `Searching music news for "${input?.query ?? "..."}"...`;
     case "get_latest_reviews":
       return `Fetching latest reviews${input?.source ? ` from ${input.source}` : ""}...`;
     case "get_news_sources":
       return "Checking news sources...";
-    // Memory tools
     case "get_user_context":
       return "Searching memories...";
     case "update_user_memory":
@@ -247,7 +231,6 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Remembering...";
     case "list_user_memories":
       return "Loading memories...";
-    // Tumblr tools
     case "connect_tumblr":
       return "Connecting to Tumblr...";
     case "post_to_tumblr":
@@ -258,7 +241,6 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Disconnecting Tumblr...";
     case "tumblr_status":
       return "Checking Tumblr status...";
-    // Telegraph tools
     case "setup_page":
       return "Setting up your Crate social page...";
     case "post_to_page":
@@ -269,14 +251,24 @@ function getToolProgressMessage(toolName: string, input: Record<string, any>): s
       return "Loading your published entries...";
     case "delete_entry":
       return "Removing entry from your page...";
-
-    case "browse_url":
-      return `Reading ${input.url ? new URL(input.url).hostname : "page"}...`;
-    case "screenshot_url":
-      return `Capturing screenshot of ${input.url ? new URL(input.url).hostname : "page"}...`;
-
+    case "browse_url": {
+      try {
+        const host = input.url ? new URL(input.url as string).hostname : "page";
+        return `Reading ${host}...`;
+      } catch {
+        return "Reading page...";
+      }
+    }
+    case "screenshot_url": {
+      try {
+        const host = input.url ? new URL(input.url as string).hostname : "page";
+        return `Capturing screenshot of ${host}...`;
+      } catch {
+        return "Capturing screenshot...";
+      }
+    }
     default:
-      return `Using ${bare.replace(/_/g, " ")}...`;
+      return `Using ${toolName.replace(/_/g, " ")}...`;
   }
 }
 
@@ -302,17 +294,10 @@ const SERVER_LABELS: Record<string, string> = {
   browser: "Browser",
 };
 
-/** Extract the server name from a fully-qualified MCP tool name. */
-function extractServerName(toolName: string): string | null {
-  const match = toolName.match(/^mcp__([^_]+)__/);
-  return match ? match[1] ?? null : null;
-}
-
 /** Build a multi-source progress string with checkmarks for completed sources. */
 function buildProgressMessage(
   completed: Set<string>,
   current: string | null,
-  _elapsed: number,
 ): string {
   const parts: string[] = [];
   for (const server of completed) {
@@ -325,6 +310,34 @@ function buildProgressMessage(
   }
   return parts.join(chalk.dim(" \u00B7 "));
 }
+
+/** Influence sub-step messages — shown while multi-step influence tools run */
+const INFLUENCE_SUBSTEPS: Record<string, string[]> = {
+  trace_influence_path: [
+    "Searching for direct connection...",
+    "Scanning both artists' neighborhoods...",
+    "Extracting co-mentions from reviews...",
+    "Looking for bridge artists...",
+    "Scoring connection strength...",
+  ],
+  find_bridge_artists: [
+    "Searching crossover artists...",
+    "Scanning genre A publications...",
+    "Scanning genre B publications...",
+    "Extracting artist mentions...",
+    "Scoring bridge candidates...",
+  ],
+  search_reviews: [
+    "Querying music publications...",
+    "Extracting full review text...",
+    "Parsing review content...",
+  ],
+  extract_influences: [
+    "Parsing review text...",
+    "Detecting co-mentions...",
+    "Scoring influence signals...",
+  ],
+};
 
 async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: string): Promise<string | void> {
   const parts = input.slice(1).split(/\s+/);
@@ -481,16 +494,16 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
       break;
     }
     case "play": {
-      const query = parts.slice(1).join(" ").trim();
-      if (!query) {
+      const playQuery = parts.slice(1).join(" ").trim();
+      if (!playQuery) {
         addChildBeforeEditor(tui, new Text(chalk.yellow("Usage: /play <song or artist>"), 1, 0));
         tui.requestRender();
         break;
       }
-      addChildBeforeEditor(tui, new Text(chalk.dim(`🔍 Searching "${query}"...`), 1, 0));
+      addChildBeforeEditor(tui, new Text(chalk.dim(`🔍 Searching "${playQuery}"...`), 1, 0));
       tui.requestRender();
       try {
-        const result = await playTrackHandler({ query });
+        const result = await playTrackHandler({ query: playQuery });
         const data = JSON.parse(result.content[0].text);
         if (data.error) {
           addChildBeforeEditor(tui, new Text(chalk.red(`Error: ${data.error}`), 1, 0));
@@ -529,13 +542,13 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
         ];
         if (data.by_status?.length) {
           lines.push("", chalk.bold("  By status:"));
-          for (const s of data.by_status as any[]) {
+          for (const s of data.by_status as Array<{ status?: string; count: number }>) {
             lines.push(`    ${s.status ?? "unknown"}: ${chalk.cyan(String(s.count))}`);
           }
         }
         if (data.by_format?.length) {
           lines.push("", chalk.bold("  By format:"));
-          for (const f of data.by_format as any[]) {
+          for (const f of data.by_format as Array<{ format?: string; count: number }>) {
             lines.push(`    ${f.format ?? "unknown"}: ${chalk.cyan(String(f.count))}`);
           }
         }
@@ -543,7 +556,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
           lines.push("", `  Avg rating: ${chalk.cyan(String(data.avg_rating))}/5`);
         }
         if (data.top_tags?.length) {
-          const tags = (data.top_tags as any[]).map((t: any) => t.tag).join(", ");
+          const tags = (data.top_tags as Array<{ tag: string }>).map((t) => t.tag).join(", ");
           lines.push("", `  Top tags: ${chalk.dim(tags)}`);
         }
         addChildBeforeEditor(tui, new Text(lines.join("\n"), 1, 1));
@@ -567,7 +580,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
         addChildBeforeEditor(tui, new Text(emptyMsg, 1, 1));
       } else {
         const lines = [chalk.bold("Playlists")];
-        for (const p of data.playlists as any[]) {
+        for (const p of data.playlists as Array<{ id: number; name: string; track_count: number; description?: string }>) {
           const desc = p.description ? chalk.dim(` — ${p.description}`) : "";
           lines.push(`  ${chalk.cyan(`#${p.id}`)} ${p.name} ${chalk.dim(`(${p.track_count} tracks)`)}${desc}`);
         }
@@ -578,7 +591,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
     }
     case "mypage": {
       try {
-        const result = await viewMyPageHandler({} as any);
+        const result = await viewMyPageHandler({} as Record<string, never>);
         const data = JSON.parse(result.content[0].text);
         if (data.status === "not_setup") {
           const msg = [
@@ -598,7 +611,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
           ];
           if (data.recent_entries?.length) {
             lines.push("", chalk.bold("  Recent:"));
-            for (const e of data.recent_entries as any[]) {
+            for (const e of data.recent_entries as Array<{ title: string; category?: string; created_at?: string }>) {
               const cat = e.category ? chalk.dim(` [${e.category}]`) : "";
               const date = e.created_at ? chalk.dim(` · ${e.created_at.slice(0, 10)}`) : "";
               lines.push(`    ${e.title}${cat}${date}`);
@@ -634,7 +647,7 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
             ? `Published Entries [${category}]`
             : "Published Entries";
           const lines = [chalk.bold(heading)];
-          for (const e of data.entries as any[]) {
+          for (const e of data.entries as Array<{ id: number; title: string; category?: string; created_at?: string; url: string }>) {
             const cat = e.category ? chalk.dim(` [${e.category}]`) : "";
             const date = e.created_at ? chalk.dim(` · ${e.created_at.slice(0, 10)}`) : "";
             lines.push(`  ${chalk.cyan(`#${e.id}`)} ${e.title}${cat}${date}`);
@@ -651,7 +664,6 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
       break;
     }
     case "news": {
-      // Parse optional story count: /news 3, /news 5, etc.
       const count = arg ? Math.min(Math.max(parseInt(arg, 10) || 5, 1), 5) : 5;
       const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       const day = days[new Date().getDay()];
@@ -677,8 +689,8 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
     }
     case "quit":
     case "exit": {
-      if (agent && (agent as any).endSession) {
-        try { await (agent as any).endSession(); } catch {}
+      if (agent?.endSession) {
+        try { await agent.endSession(); } catch { /* ignore */ }
       }
       tui.stop();
       process.exit(0);
@@ -697,6 +709,183 @@ async function handleSlashCommand(tui: TUI, agent: CrateAgent | null, input: str
   }
 }
 
+/** Handle the CrateEvent stream from agent.research() and render to the TUI. */
+async function handleResearchStream(
+  tui: TUI,
+  events: AsyncGenerator<CrateEvent>,
+  loader: Loader,
+  loaderInserted: boolean,
+): Promise<{ accumulated: string; toolsUsed: string[]; sourcesUsed: Set<string>; aborted: boolean }> {
+  const response = new Markdown("", 1, 1, markdownTheme);
+  let accumulated = "";
+  let loaderRemoved = false;
+  const sourcesUsed = new Set<string>();
+  const toolsUsed: string[] = [];
+  const queryStartTime = Date.now();
+  let aborted = false;
+
+  // Influence sub-step ticker state
+  let activeInfluenceTool: string | null = null;
+  let influenceToolInput: Record<string, unknown> = {};
+  let elapsedTicks = 0;
+  const thinkingPhrases = ["Thinking...", "Reasoning...", "Working on it..."];
+
+  const elapsedTimer = setInterval(() => {
+    elapsedTicks++;
+    if (loaderRemoved) return;
+
+    if (activeInfluenceTool && INFLUENCE_SUBSTEPS[activeInfluenceTool]) {
+      const steps = INFLUENCE_SUBSTEPS[activeInfluenceTool]!;
+      const stepIdx = Math.min(elapsedTicks - 1, steps.length - 1);
+      const step = steps[stepIdx]!;
+      const stepNum = Math.min(elapsedTicks, steps.length);
+      const header =
+        activeInfluenceTool === "trace_influence_path"
+          ? `${influenceToolInput.from_artist ?? "?"} → ${influenceToolInput.to_artist ?? "?"}`
+          : activeInfluenceTool === "find_bridge_artists"
+            ? `${influenceToolInput.genre_a ?? "?"} ↔ ${influenceToolInput.genre_b ?? "?"}`
+            : activeInfluenceTool === "search_reviews"
+              ? `${influenceToolInput.artist ?? "artist"}`
+              : "Influence analysis";
+      loader.setMessage(
+        `${header}  ${chalk.dim(`step ${stepNum}/${steps.length}:`)} ${step} ${chalk.dim(`(${elapsedTicks}s)`)}`,
+      );
+    } else {
+      const phrase = thinkingPhrases[Math.min(elapsedTicks - 1, thinkingPhrases.length - 1)]!;
+      loader.setMessage(`${phrase} ${chalk.dim(`(${elapsedTicks}s)`)}`);
+    }
+  }, 1000);
+
+  const stopLoader = () => {
+    clearInterval(elapsedTimer);
+    loader.stop();
+  };
+
+  const removeLoader = () => {
+    if (!loaderRemoved) {
+      stopLoader();
+      tui.removeChild(loader);
+      loaderRemoved = true;
+    }
+  };
+
+  try {
+    for await (const event of events) {
+      if (aborted) break;
+
+      switch (event.type) {
+        case "thinking": {
+          // Thinking events are internal — no UI rendering needed
+          break;
+        }
+
+        case "tool_start": {
+          const bare = event.tool;
+          if (!toolsUsed.includes(bare)) toolsUsed.push(bare);
+          sourcesUsed.add(event.server);
+
+          // Track influence tool for sub-step ticker
+          if (INFLUENCE_SUBSTEPS[bare]) {
+            activeInfluenceTool = bare;
+            influenceToolInput = (event.input ?? {}) as Record<string, unknown>;
+            elapsedTicks = 0;
+          } else {
+            activeInfluenceTool = null;
+            influenceToolInput = {};
+          }
+
+          if (!loaderRemoved) {
+            const elapsed = Date.now() - queryStartTime;
+            if (elapsed < 3000) {
+              // Tier 1: simple message
+              const progressMsg = getToolProgressMessage(bare, (event.input ?? {}) as Record<string, unknown>);
+              loader.setMessage(progressMsg);
+            } else {
+              // Tier 2+: source-by-source with checkmarks
+              const completed = new Set(
+                [...sourcesUsed].filter((s) => s !== event.server),
+              );
+              loader.setMessage(buildProgressMessage(completed, event.server));
+            }
+          }
+          break;
+        }
+
+        case "tool_end": {
+          // If tool took >10s, show a note (only if loader is still visible)
+          if (!loaderRemoved && event.durationMs > 10000) {
+            const label = SERVER_LABELS[event.server] ?? event.server;
+            loader.setMessage(
+              `${chalk.green("\u2713")} ${label} · ${event.tool} ${chalk.dim(`(${(event.durationMs / 1000).toFixed(1)}s — slow)`)}`,
+            );
+          }
+          break;
+        }
+
+        case "answer_start": {
+          // Switch from loader to markdown response
+          removeLoader();
+          addChildBeforeEditor(tui, response);
+          tui.requestRender();
+          break;
+        }
+
+        case "answer_token": {
+          if (!loaderRemoved) {
+            removeLoader();
+            addChildBeforeEditor(tui, response);
+          }
+          accumulated += event.token;
+          response.setText(accumulated);
+          tui.requestRender();
+          break;
+        }
+
+        case "error": {
+          removeLoader();
+          addChildBeforeEditor(
+            tui,
+            new Text(chalk.red(`Error: ${event.message}`), 1, 0),
+          );
+          tui.requestRender();
+          break;
+        }
+
+        case "done": {
+          // Done event handled after loop
+          break;
+        }
+
+        case "plan": {
+          // Task planning display (Improvement 4 placeholder — render plan tasks)
+          if (!loaderRemoved) {
+            const planLines = event.tasks
+              .map((t) => `  ${chalk.dim("○")} ${t.description}`)
+              .join("\n");
+            addChildBeforeEditor(
+              tui,
+              new Text(chalk.bold("Research plan:") + "\n" + planLines, 1, 1),
+            );
+            tui.requestRender();
+          }
+          break;
+        }
+      }
+    }
+  } catch (err) {
+    removeLoader();
+    const message = err instanceof Error ? err.message : "An unexpected error occurred";
+    addChildBeforeEditor(
+      tui,
+      new Text(chalk.red(`Error: ${message}`), 1, 0),
+    );
+  }
+
+  removeLoader();
+
+  return { accumulated, toolsUsed, sourcesUsed, aborted };
+}
+
 export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
   const terminal = new ProcessTerminal();
   const tui = new TUI(terminal);
@@ -710,13 +899,11 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
   if (isFirstRun() || needsAnthropicKey) {
     showOnboarding(tui, needsAnthropicKey, (result: OnboardingResult) => {
       if (result.anthropicKeySet && !currentAgent) {
-        // Anthropic key was just entered — construct agent now
         currentAgent = new CrateAgent(options?.model);
       }
       if (currentAgent) {
         currentAgent.reloadServers();
       }
-      // Show welcome after wizard completes
       addChildBeforeEditor(tui, new Text(WELCOME_TEXT, 1, 1));
       tui.requestRender();
     });
@@ -726,7 +913,6 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
 
   // Slash command autocomplete
   const slashCommands: SlashCommand[] = [
-    // Player
     { name: "play", description: "Play a track (/play <query>)" },
     { name: "pause", description: "Toggle pause/resume" },
     { name: "next", description: "Next track (playlist)" },
@@ -734,15 +920,11 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
     { name: "stop", description: "Stop playback" },
     { name: "vol", description: "Set or show volume (/vol [0-150])" },
     { name: "np", description: "Now playing info" },
-    // Collection & Playlists
     { name: "collection", description: "Show collection stats" },
     { name: "playlists", description: "List all playlists" },
-    // Social
     { name: "mypage", description: "Your Crate social page URL & recent entries" },
     { name: "entries", description: "List published entries (/entries [category])" },
-    // News
     { name: "news", description: "Generate daily music news segment (/news [count])" },
-    // Session
     { name: "help", description: "Show available commands" },
     { name: "model", description: "Show or switch model (sonnet, opus, haiku)" },
     { name: "cost", description: "Show token usage and cost" },
@@ -764,12 +946,11 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
     if (!trimmed || isProcessing) return;
 
     // Handle slash commands locally
-    var effectivePrompt: string;
-    var displayText: string;
+    let effectivePrompt: string;
+    let displayText: string;
     if (trimmed.startsWith("/")) {
       const result = await handleSlashCommand(tui, currentAgent, trimmed);
-      if (typeof result !== "string") return;  // void = handled internally
-      // Synthetic prompt — show the slash command, send the prompt to the agent
+      if (typeof result !== "string") return;
       effectivePrompt = result;
       displayText = trimmed;
     } else {
@@ -802,192 +983,25 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
       tui,
       (s: string) => chalk.cyan(s),
       (s: string) => chalk.dim(s),
-      "Thinking…",
+      "Thinking...",
     );
     addChildBeforeEditor(tui, loader);
     tui.requestRender();
 
-    // Influence sub-step messages — shown while multi-step influence tools run
-    const INFLUENCE_SUBSTEPS: Record<string, string[]> = {
-      trace_influence_path: [
-        "Searching for direct connection…",
-        "Scanning both artists' neighborhoods…",
-        "Extracting co-mentions from reviews…",
-        "Looking for bridge artists…",
-        "Scoring connection strength…",
-      ],
-      find_bridge_artists: [
-        "Searching crossover artists…",
-        "Scanning genre A publications…",
-        "Scanning genre B publications…",
-        "Extracting artist mentions…",
-        "Scoring bridge candidates…",
-      ],
-      search_reviews: [
-        "Querying music publications…",
-        "Extracting full review text…",
-        "Parsing review content…",
-      ],
-      extract_influences: [
-        "Parsing review text…",
-        "Detecting co-mentions…",
-        "Scoring influence signals…",
-      ],
-    };
-    let activeInfluenceTool: string | null = null;
-    let influenceToolInput: Record<string, any> = {};
-
-    // Elapsed-time ticker — updates the loader every second so user sees activity
-    let elapsedTicks = 0;
-    const thinkingPhrases = ["Thinking…", "Reasoning…", "Working on it…"];
-    const elapsedTimer = setInterval(() => {
-      elapsedTicks++;
-      if (!loaderRemoved) {
-        // If an influence tool is active, show sub-step progress
-        if (activeInfluenceTool && INFLUENCE_SUBSTEPS[activeInfluenceTool]) {
-          const steps = INFLUENCE_SUBSTEPS[activeInfluenceTool]!;
-          const stepIdx = Math.min(elapsedTicks - 1, steps.length - 1);
-          const step = steps[stepIdx]!;
-          const stepNum = Math.min(elapsedTicks, steps.length);
-          const header =
-            activeInfluenceTool === "trace_influence_path"
-              ? `🔗 ${influenceToolInput.from_artist ?? "?"} → ${influenceToolInput.to_artist ?? "?"}`
-              : activeInfluenceTool === "find_bridge_artists"
-                ? `🌉 ${influenceToolInput.genre_a ?? "?"} ↔ ${influenceToolInput.genre_b ?? "?"}`
-                : activeInfluenceTool === "search_reviews"
-                  ? `🔍 ${influenceToolInput.artist ?? "artist"}`
-                  : "🧬 Influence analysis";
-          loader.setMessage(
-            `${header}  ${chalk.dim(`step ${stepNum}/${steps.length}:`)} ${step} ${chalk.dim(`(${elapsedTicks}s)`)}`,
-          );
-        } else {
-          const phrase = thinkingPhrases[Math.min(elapsedTicks - 1, thinkingPhrases.length - 1)]!;
-          loader.setMessage(`${phrase} ${chalk.dim(`(${elapsedTicks}s)`)}`);
-        }
-      }
-    }, 1000);
-
-    // Helper: clean up loader and elapsed timer
-    const stopLoader = () => {
-      clearInterval(elapsedTimer);
-      loader.stop();
-    };
-
-    // Stream agent response — with progress tiers and interrupt support
-    const response = new Markdown("", 1, 1, markdownTheme);
-    let accumulated = "";
-    let loaderRemoved = false;
     const startTime = Date.now();
-    const sourcesUsed = new Set<string>();
-    const toolsUsed: string[] = [];
-    let aborted = false;
 
-    // Interrupt handling — Esc during streaming
-    const onEsc = (key: string) => {
-      if (key === "escape" && isProcessing) {
-        aborted = true;
-      }
-    };
-    if (typeof (tui as any).onKey === "function") {
-      (tui as any).onKey(onEsc);
-    } else if (typeof (tui as any).on === "function") {
-      (tui as any).on("key", onEsc);
-    }
-
-    try {
-      for await (const msg of currentAgent.chat(effectivePrompt)) {
-        if (aborted) break;
-
-        if (msg.type === "assistant") {
-          const content = (msg as any).message?.content;
-          if (!content) continue;
-
-          for (const block of content) {
-            if (aborted) break;
-
-            // Update loader with tool call progress (with elapsed-time tiers)
-            if (block.type === "tool_use" && !loaderRemoved) {
-              const bare = block.name.replace(/^mcp__[^_]+__/, "");
-              toolsUsed.push(bare);
-              const serverName = extractServerName(block.name);
-              const elapsed = Date.now() - startTime;
-
-              // Track active influence tool for sub-step ticker
-              if (INFLUENCE_SUBSTEPS[bare]) {
-                activeInfluenceTool = bare;
-                influenceToolInput = (block.input as Record<string, any>) ?? {};
-                elapsedTicks = 0; // Reset ticker so sub-steps start from step 1
-              } else {
-                activeInfluenceTool = null;
-                influenceToolInput = {};
-              }
-
-              if (elapsed < 3000) {
-                // Tier 1: simple message
-                const progressMsg = getToolProgressMessage(block.name, block.input ?? {});
-                loader.setMessage(progressMsg);
-              } else {
-                // Tier 2+: source-by-source with checkmarks
-                if (serverName) {
-                  // Mark previous server as done, current as in-progress
-                  const prevServers = [...sourcesUsed];
-                  if (serverName && prevServers.length > 0) {
-                    // All previously seen servers are "completed"
-                  }
-                  sourcesUsed.add(serverName);
-                  const completed = new Set(
-                    [...sourcesUsed].filter((s) => s !== serverName),
-                  );
-                  loader.setMessage(buildProgressMessage(completed, serverName, elapsed));
-                } else {
-                  const progressMsg = getToolProgressMessage(block.name, block.input ?? {});
-                  loader.setMessage(progressMsg);
-                }
-              }
-
-              // Always track the server for the footer
-              if (serverName) sourcesUsed.add(serverName);
-            }
-
-            if (block.type === "text" && block.text) {
-              if (!loaderRemoved) {
-                stopLoader();
-                tui.removeChild(loader);
-                addChildBeforeEditor(tui, response);
-                loaderRemoved = true;
-              }
-              accumulated += block.text;
-              response.setText(accumulated);
-              tui.requestRender();
-            }
-          }
-        }
-      }
-    } catch (error) {
-      if (!loaderRemoved) {
-        stopLoader();
-        tui.removeChild(loader);
-        loaderRemoved = true;
-      }
-      const message =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      addChildBeforeEditor(
-        tui,
-        new Text(chalk.red(`Error: ${message}`), 1, 0),
-      );
-    }
-
-    if (!loaderRemoved) {
-      stopLoader();
-      tui.removeChild(loader);
-    }
+    // Stream typed events from agent.research()
+    const events = currentAgent.research(effectivePrompt);
+    const { accumulated, toolsUsed, sourcesUsed, aborted } = await handleResearchStream(
+      tui, events, loader, true,
+    );
 
     // Interrupt notice
     if (aborted) {
       addChildBeforeEditor(
         tui,
         new Text(
-          chalk.yellow("\u26A0 Response interrupted \u2014 some sources may not have been checked."),
+          chalk.yellow("\u26A0 Response interrupted — some sources may not have been checked."),
           1,
           0,
         ),
@@ -1014,7 +1028,7 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
       messageCount: getMessageCount(),
       responseLength: accumulated.length,
       hasTrackList,
-      collectionSize: 0, // TODO: could query, but avoid DB hit on every response
+      collectionSize: 0,
       playlistCount: 0,
     };
     const hint = getHintForContext(hintCtx);
@@ -1032,17 +1046,12 @@ export function createApp(agent: CrateAgent | null, options?: AppOptions): TUI {
 
   // Graceful Ctrl+C handling
   process.on("SIGINT", () => {
-    if (isProcessing) {
-      // During streaming, just flag abort — the streaming loop handles cleanup
-      return;
-    }
-    // Not processing — clean exit
+    if (isProcessing) return;
     tui.stop();
     process.exit(0);
   });
 
-  // Now-playing bar — added as a regular TUI child (not overlay) so it
-  // occupies real space and never paints over the Editor cursor.
+  // Now-playing bar
   const nowPlayingBar = new NowPlayingBar();
   const nowPlayingPoller = new NowPlayingPoller(tui, nowPlayingBar);
   tui.addChild(nowPlayingBar);

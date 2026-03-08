@@ -1,9 +1,25 @@
 // src/agent/system-prompt.ts
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/** Read SOUL.md from project root at module load. */
+function loadSoul(): string {
+  const thisFile = fileURLToPath(import.meta.url);
+  // Resolve from src/agent/ → project root
+  const projectRoot = join(dirname(thisFile), "..", "..");
+  try {
+    return readFileSync(join(projectRoot, "SOUL.md"), "utf-8").trim();
+  } catch {
+    // Fall back if SOUL.md is missing (e.g., in dist/)
+    return "You are Crate, an expert music research agent. You help DJs, record collectors, music journalists, and serious listeners research music in depth.";
+  }
+}
+
+const soul = loadSoul();
 
 export function getSystemPrompt(): string {
-  return `You are Crate, an expert music research agent. You help DJs, record collectors, music journalists, and serious listeners research music in depth.
-
-You run in a terminal and communicate using markdown formatting.
+  return `${soul}
 
 ## Your data sources
 
