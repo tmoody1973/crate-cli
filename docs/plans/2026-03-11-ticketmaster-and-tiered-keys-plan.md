@@ -10,6 +10,148 @@
 
 ---
 
+### Task 0: Refactor CrateAgent to accept API keys as constructor options
+
+**Why:** The web version needs to create per-user agent instances with different API keys. Currently `getActiveServers()` reads `process.env` directly, which is not concurrency-safe when multiple users hit the server simultaneously. This refactor makes `CrateAgent` accept keys as a constructor param, making it safe for web use.
+
+**Files:**
+- Modify: `src/agent/index.ts`
+- Modify: `src/servers/index.ts`
+- Create: `tests/agent-keys.test.ts`
+
+**Step 1: Write the failing test**
+
+```typescript
+// tests/agent-keys.test.ts
+import { describe, it, expect } from "vitest";
+import { CrateAgent } from "../src/agent/index.js";
+
+describe("CrateAgent with injected keys", () => {
+  it("accepts keys in constructor options", () => {
+    const agent = new CrateAgent({
+      model: "claude-haiku-4-5-20251001",
+      keys: { LASTFM_API_KEY: "test-key-123" },
+    });
+    expect(agent.serverNames).toContain("lastfm");
+  });
+
+  it("falls back to process.env when no keys provided", () => {
+    const agent = new CrateAgent();
+    // Should work exactly as before
+    expect(agent.serverNames).toContain("musicbrainz");
+  });
+
+  it("does not activate servers when key is missing from both options and env", () => {
+    const agent = new CrateAgent({ keys: {} });
+    // Genius requires GENIUS_ACCESS_TOKEN — not in options or env
+    expect(agent.serverNames).not.toContain("genius");
+  });
+});
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `npx vitest run tests/agent-keys.test.ts`
+Expected: FAIL — CrateAgent constructor doesn't accept options object
+
+**Step 3: Update `getActiveServers()` to accept optional keys**
+
+In `src/servers/index.ts`, update the function signature:
+
+```typescript
+export function getActiveServers(keys?: Record<string, string>): Record<string, any> {
+  // Helper: check key from injected keys first, then process.env
+  const hasKey = (envVar: string): boolean =>
+    !!(keys?.[envVar] || process.env[envVar]);
+
+  const servers: Record<string, any> = {
+    musicbrainz: musicbrainzServer,
+  };
+
+  if (hasKey("DISCOGS_KEY") && hasKey("DISCOGS_SECRET"))
+    servers.discogs = discogsServer;
+  if (hasKey("MEM0_API_KEY")) servers.memory = memoryServer;
+  if (hasKey("LASTFM_API_KEY")) servers.lastfm = lastfmServer;
+  if (hasKey("GENIUS_ACCESS_TOKEN")) servers.genius = geniusServer;
+  // Ticketmaster added in Task 5
+  servers.wikipedia = wikipediaServer;
+  servers.bandcamp = bandcampServer;
+  servers.youtube = youtubeServer;
+  servers.radio = radioServer;
+  servers.news = newsServer;
+  servers.collection = collectionServer;
+  servers.playlist = playlistServer;
+  if (hasKey("TAVILY_API_KEY") || hasKey("EXA_API_KEY")) {
+    servers.websearch = webSearchServer;
+    servers.influence = influenceServer;
+  }
+  servers.influencecache = influenceCacheServer;
+  servers.telegraph = telegraphServer;
+  if (hasKey("TUMBLR_CONSUMER_KEY") && hasKey("TUMBLR_CONSUMER_SECRET"))
+    servers.tumblr = tumblrServer;
+  if (hasKey("KERNEL_API_KEY")) {
+    servers.browser = browserServer;
+    servers.whosampled = whoSampledServer;
+  }
+
+  return servers;
+}
+```
+
+**Step 4: Update CrateAgent constructor**
+
+In `src/agent/index.ts`:
+
+```typescript
+interface CrateAgentOptions {
+  model?: string;
+  keys?: Record<string, string>;
+}
+
+export class CrateAgent {
+  private model: string;
+  private keys?: Record<string, string>;
+  // ... existing private fields ...
+
+  constructor(optionsOrModel?: string | CrateAgentOptions) {
+    // Backward-compatible: accept string (model name) or options object
+    if (typeof optionsOrModel === "string") {
+      this.model = optionsOrModel;
+      this.keys = undefined;
+    } else {
+      this.model = optionsOrModel?.model ?? DEFAULT_MODEL;
+      this.keys = optionsOrModel?.keys;
+    }
+    this.servers = getActiveServers(this.keys);
+    this.memoryEnabled = !!(this.keys?.MEM0_API_KEY || process.env.MEM0_API_KEY);
+    // ... rest of constructor unchanged ...
+  }
+
+  reloadServers(): void {
+    this.servers = getActiveServers(this.keys);
+    this.memoryEnabled = !!(this.keys?.MEM0_API_KEY || process.env.MEM0_API_KEY);
+  }
+  // ... rest of class unchanged ...
+}
+```
+
+**Step 5: Run tests**
+
+Run: `npx vitest run tests/agent-keys.test.ts`
+Expected: PASS
+
+Run: `npx vitest run`
+Expected: ALL PASS (no breaking changes — string arg still works)
+
+**Step 6: Commit**
+
+```bash
+git add src/agent/index.ts src/servers/index.ts tests/agent-keys.test.ts
+git commit -m "refactor: CrateAgent accepts keys as constructor options for web concurrency"
+```
+
+---
+
 ### Task 1: Add `resolveKey()` and `isUsingEmbeddedKey()` to config
 
 **Files:**
