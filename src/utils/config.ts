@@ -8,7 +8,7 @@ const KEY_GATED_SERVERS: Record<string, string[]> = {
   spotify: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET"],
   lastfm: ["LASTFM_API_KEY"],
   genius: ["GENIUS_ACCESS_TOKEN"],
-  events: ["TICKETMASTER_API_KEY"],
+  ticketmaster: ["TICKETMASTER_API_KEY"],
   youtube: ["YOUTUBE_API_KEY"],
   "web-search": ["TAVILY_API_KEY", "EXA_API_KEY"],
   tumblr: ["TUMBLR_CONSUMER_KEY", "TUMBLR_CONSUMER_SECRET"],
@@ -43,4 +43,32 @@ export function getConfig(): CrateConfig {
 
 export function resolveModel(alias: string): string {
   return AVAILABLE_MODELS[alias.toLowerCase()] ?? alias;
+}
+
+/* ── Two-tier key architecture ─────────────────────────────────── */
+
+const EMBEDDED_KEYS: Record<string, Record<string, string>> = {
+  ticketmaster: { TICKETMASTER_API_KEY: "PLACEHOLDER_TICKETMASTER_KEY" },
+  lastfm: { LASTFM_API_KEY: "PLACEHOLDER_LASTFM_KEY" },
+  discogs: { DISCOGS_KEY: "PLACEHOLDER_DISCOGS_KEY", DISCOGS_SECRET: "PLACEHOLDER_DISCOGS_SECRET" },
+};
+
+// Reverse lookup: env var name → embedded value
+const EMBEDDED_KEY_LOOKUP: Record<string, string> = {};
+for (const keys of Object.values(EMBEDDED_KEYS)) {
+  for (const [envVar, value] of Object.entries(keys)) {
+    EMBEDDED_KEY_LOOKUP[envVar] = value;
+  }
+}
+
+/** Resolve an API key: user env var wins, embedded default as fallback. */
+export function resolveKey(envVar: string): string | undefined {
+  return process.env[envVar] || EMBEDDED_KEY_LOOKUP[envVar] || undefined;
+}
+
+/** Check if a service is using its embedded default key (no user override). */
+export function isUsingEmbeddedKey(service: string): boolean {
+  const serviceKeys = EMBEDDED_KEYS[service];
+  if (!serviceKeys) return false;
+  return Object.keys(serviceKeys).every((k) => !process.env[k]);
 }
