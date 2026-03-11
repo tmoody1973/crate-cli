@@ -13,6 +13,11 @@ import { Scratchpad } from "../utils/scratchpad.js";
 
 const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
+export interface CrateAgentOptions {
+  model?: string;
+  keys?: Record<string, string>;
+}
+
 /** Extract server name from a fully-qualified MCP tool name like mcp__musicbrainz__get_artist */
 function serverFromToolName(toolName: string): string {
   const parts = toolName.split("__");
@@ -27,6 +32,7 @@ function bareToolName(toolName: string): string {
 
 export class CrateAgent {
   private model: string;
+  private keys?: Record<string, string>;
   private sessionId?: string;
   private servers: Record<string, unknown>;
   private totalCostUsd = 0;
@@ -38,10 +44,15 @@ export class CrateAgent {
   private skillsLoadedPromise?: Promise<void>;
   private scratchpad: Scratchpad | null;
 
-  constructor(model?: string) {
-    this.model = model ?? DEFAULT_MODEL;
-    this.servers = getActiveServers();
-    this.memoryEnabled = !!process.env.MEM0_API_KEY;
+  constructor(optionsOrModel?: string | CrateAgentOptions) {
+    if (typeof optionsOrModel === "string") {
+      this.model = optionsOrModel;
+    } else {
+      this.model = optionsOrModel?.model ?? DEFAULT_MODEL;
+      this.keys = optionsOrModel?.keys;
+    }
+    this.servers = getActiveServers(this.keys);
+    this.memoryEnabled = !!(this.keys?.MEM0_API_KEY || process.env.MEM0_API_KEY);
     try {
       this.scratchpad = new Scratchpad();
     } catch {
@@ -61,10 +72,10 @@ export class CrateAgent {
     return Object.keys(this.servers);
   }
 
-  /** Reload servers from current process.env (for hot-reloading after key changes). */
+  /** Reload servers from current keys/process.env (for hot-reloading after key changes). */
   reloadServers(): void {
-    this.servers = getActiveServers();
-    this.memoryEnabled = !!process.env.MEM0_API_KEY;
+    this.servers = getActiveServers(this.keys);
+    this.memoryEnabled = !!(this.keys?.MEM0_API_KEY || process.env.MEM0_API_KEY);
   }
 
   switchModel(alias: string): string {

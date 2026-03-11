@@ -69,12 +69,12 @@ function exaKey(): string {
   return key;
 }
 
-export function hasTavily(): boolean {
-  return !!process.env.TAVILY_API_KEY;
+export function hasTavily(keys?: Record<string, string>): boolean {
+  return !!(keys?.TAVILY_API_KEY || process.env.TAVILY_API_KEY);
 }
 
-export function hasExa(): boolean {
-  return !!process.env.EXA_API_KEY;
+export function hasExa(keys?: Record<string, string>): boolean {
+  return !!(keys?.EXA_API_KEY || process.env.EXA_API_KEY);
 }
 
 const FETCH_TIMEOUT_MS = 15_000; // 15s timeout for external API calls

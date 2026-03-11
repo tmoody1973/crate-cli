@@ -19,20 +19,22 @@ import { tumblrServer } from "./tumblr.js";
 import { browserServer } from "./browser.js";
 import { whoSampledServer } from "./whosampled.js";
 
-export function getActiveServers(): Record<string, any> {
+export function getActiveServers(keys?: Record<string, string>): Record<string, any> {
+  const hasKey = (envVar: string): boolean => !!(keys?.[envVar] || process.env[envVar]);
+
   const servers: Record<string, any> = {
     musicbrainz: musicbrainzServer,
   };
 
   // Key-gated servers:
-  if (process.env.DISCOGS_KEY && process.env.DISCOGS_SECRET)
+  if (hasKey("DISCOGS_KEY") && hasKey("DISCOGS_SECRET"))
     servers.discogs = discogsServer;
-  if (process.env.MEM0_API_KEY) servers.memory = memoryServer;
-  if (process.env.LASTFM_API_KEY) servers.lastfm = lastfmServer;
-  // if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET)
+  if (hasKey("MEM0_API_KEY")) servers.memory = memoryServer;
+  if (hasKey("LASTFM_API_KEY")) servers.lastfm = lastfmServer;
+  // if (hasKey("SPOTIFY_CLIENT_ID") && hasKey("SPOTIFY_CLIENT_SECRET"))
   //   servers.spotify = spotifyServer;
-  if (process.env.GENIUS_ACCESS_TOKEN) servers.genius = geniusServer;
-  // if (process.env.TICKETMASTER_API_KEY) servers.events = eventsServer;
+  if (hasKey("GENIUS_ACCESS_TOKEN")) servers.genius = geniusServer;
+  // if (hasKey("TICKETMASTER_API_KEY")) servers.events = eventsServer;
   servers.wikipedia = wikipediaServer; // Always available (free endpoints; Enterprise optional)
   servers.bandcamp = bandcampServer; // Always available (no API key required)
   servers.youtube = youtubeServer; // Always available (yt-dlp + mpv)
@@ -40,14 +42,14 @@ export function getActiveServers(): Record<string, any> {
   servers.news = newsServer; // Always available (RSS feeds, no API key)
   servers.collection = collectionServer; // Always available (local SQLite)
   servers.playlist = playlistServer; // Always available (local SQLite)
-  if (hasTavily() || hasExa()) servers.websearch = webSearchServer;
-  if (hasTavily() || hasExa()) servers.influence = influenceServer;
+  if (hasTavily(keys) || hasExa(keys)) servers.websearch = webSearchServer;
+  if (hasTavily(keys) || hasExa(keys)) servers.influence = influenceServer;
   servers.influencecache = influenceCacheServer; // Always available (local SQLite)
   servers.telegraph = telegraphServer; // Always available (anonymous Telegraph API)
-  if (process.env.TUMBLR_CONSUMER_KEY && process.env.TUMBLR_CONSUMER_SECRET)
+  if (hasKey("TUMBLR_CONSUMER_KEY") && hasKey("TUMBLR_CONSUMER_SECRET"))
     servers.tumblr = tumblrServer;
-  if (process.env.KERNEL_API_KEY) servers.browser = browserServer;
-  if (process.env.KERNEL_API_KEY) servers.whosampled = whoSampledServer;
+  if (hasKey("KERNEL_API_KEY")) servers.browser = browserServer;
+  if (hasKey("KERNEL_API_KEY")) servers.whosampled = whoSampledServer;
 
   return servers;
 }
@@ -56,8 +58,8 @@ export function getAllowedTools(servers: Record<string, any>): string[] {
   return Object.keys(servers).map((name) => `mcp__${name}__*`);
 }
 
-export function getServerStatus(): { active: string[]; inactive: string[] } {
-  const active = Object.keys(getActiveServers());
+export function getServerStatus(keys?: Record<string, string>): { active: string[]; inactive: string[] } {
+  const active = Object.keys(getActiveServers(keys));
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
