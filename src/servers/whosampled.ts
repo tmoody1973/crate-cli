@@ -2,15 +2,39 @@
 /**
  * WhoSampled MCP server — sample relationship metadata extraction.
  *
- * Content signal analysis:
- *   - search: yes (site is publicly searchable)
- *   - ai-train: no (respecting robots.txt ai-train directive)
- *   - ai-input: unspecified
- *   - Extraction scope: metadata only (artist, track, year, type, element, URL)
- *   - No editorial content is extracted
+ * CONTENT SIGNAL COMPLIANCE (per WhoSampled robots.txt):
  *
- * Uses Kernel.sh headless browser via withBrowser helper to navigate
- * WhoSampled pages and extract structured sample relationship data.
+ * WhoSampled's robots.txt defines three content signals:
+ *
+ *   search:   "building a search index and providing search results (e.g.,
+ *              returning hyperlinks and short excerpts). Search does not
+ *              include providing AI-generated search summaries."
+ *   ai-input: "inputting content into one or more AI models (e.g., retrieval
+ *              augmented generation, grounding, or other real-time taking of
+ *              content for generative AI search answers)."
+ *   ai-train: "training or fine-tuning AI models."
+ *
+ * WhoSampled's values:
+ *   - search:   yes — granted
+ *   - ai-train: no  — restricted (we do not train on any content)
+ *   - ai-input: absent — per the framework: "the website operator neither
+ *     grants nor restricts permission via Content-Signal with respect to
+ *     the corresponding use."
+ *
+ * This server's compliance posture:
+ *   - Operates within search=yes: returns hyperlinks and short structured
+ *     metadata (artist name, track title, year, sample type, WhoSampled URL).
+ *     No AI-generated search summaries are produced by this server.
+ *   - Respects ai-train=no: no content is used for training or fine-tuning.
+ *   - Minimizes ai-input exposure: returns structured metadata only, not
+ *     editorial content, user comments, or page prose. The metadata returned
+ *     (who sampled whom) is closer to search results than content ingestion.
+ *   - Every result includes a whosampled_url pointing users back to the source.
+ *   - Uses a real Chromium browser via Kernel.sh, not a crawler bot.
+ *
+ * Architectural separation: WhoSampled provides the sample relationship graph.
+ * Discogs, MusicBrainz, and Genius elaborate on the results within their own
+ * terms. Each server operates within its own source's content policies.
  */
 
 import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
