@@ -203,12 +203,15 @@ Edit `SOUL.md` to customize how Crate thinks about music, what it values in rese
 | **Telegraph** | 5 (setup page, post, view page, list entries, delete entry) | No |
 | **Tumblr** | 5 (connect, post, blog info, disconnect, status) | Yes |
 | **Browser** | 2 (browse URL, screenshot page) | Yes |
+| **WhoSampled** | 3 (search tracks, sample connections, artist sample overview) | Yes* |
 
 MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, Influence Cache, and Telegraph are always available — no API keys needed. The others activate automatically when you provide their API keys.
 
 *Web Search and Influence Network use dual providers — Tavily (keyword) and Exa.ai (neural/semantic). Either key enables both servers; both keys unlock the full toolkit.
 
 *YouTube search works without a key via yt-dlp scraping. Set `YOUTUBE_API_KEY` for faster, richer search results.
+
+*WhoSampled uses the Kernel.sh cloud browser (same `KERNEL_API_KEY` as the Browser server).
 
 Wikipedia supports optional [Wikimedia Enterprise](https://enterprise.wikimedia.com/) credentials for richer article content, with automatic fallback to free endpoints.
 
@@ -423,6 +426,18 @@ Cloud browser powered by [Kernel.sh](https://onkernel.com/) for reading full art
 
 The agent automatically uses the browser as a fallback when standard HTTP fetches fail due to anti-bot protection or JavaScript-rendered content.
 
+### WhoSampled (requires `KERNEL_API_KEY`)
+
+Structured sample relationship data from [WhoSampled](https://www.whosampled.com/). Returns metadata and WhoSampled URLs — no editorial content scraped. The agent uses Discogs, MusicBrainz, and Genius to elaborate on the connections found.
+
+Uses the same Kernel.sh cloud browser as the Browser server. See [Content Signal Compliance](src/servers/whosampled.ts) for the full analysis of WhoSampled's content signals.
+
+| Tool | What it does |
+|------|-------------|
+| `search_whosampled` | Search for a track by artist + title, returns matches with sample counts and WhoSampled URLs |
+| `get_track_samples` | Get what a track sampled and who sampled it — title, artist, year, type, element, WhoSampled URL |
+| `get_artist_connections` | Artist's sampling footprint: total samples used/sampled by, top tracks in each direction |
+
 ## Quick Start
 
 ### Prerequisites
@@ -615,6 +630,7 @@ crate-cli/
 │   │   ├── telegraph.ts       # Telegraph publishing (5 tools, anonymous pages)
 │   │   ├── tumblr.ts          # Tumblr publishing (5 tools, OAuth 1.0a, NPF)
 │   │   ├── browser.ts         # Cloud browser (2 tools, Kernel.sh + Playwright)
+│   │   ├── whosampled.ts      # WhoSampled sample connections (3 tools, Kernel.sh browser)
 │   │   ├── collection.ts      # Local collection manager (SQLite)
 │   │   ├── playlist.ts        # Playlist manager (SQLite)
 │   │   └── memory.ts          # Mem0 persistent memory
