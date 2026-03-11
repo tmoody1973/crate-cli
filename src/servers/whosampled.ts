@@ -141,136 +141,145 @@ function buildFullUrl(href: string): string {
 
 /**
  * Parse search results from WhoSampled search page HTML.
- * Looks for track entries with links to track pages and artist info.
+ *
+ * Real DOM structure:
+ *   Top hit:  div.topHit > div.title > a.trackTitle + span.trackArtist > a
+ *   List:     li.listEntry.trackEntry > span.trackDetails > a.trackName + span.trackArtist > a
  */
 export function parseSearchResults(html: string): SearchResult[] {
   const results: SearchResult[] = [];
+  const seen = new Set<string>();
 
-  // Match track entries: links like /Artist/Track/ with track name and artist info
-  const trackPattern =
-    /<a\s+[^>]*href="(\/[^"]+\/[^"]+\/)"[^>]*>\s*([^<]+)<\/a>/gi;
-  const artistPattern =
-    /<span[^>]*class="[^"]*artist[^"]*"[^>]*>\s*(?:<a[^>]*>)?\s*([^<]+)\s*(?:<\/a>)?\s*<\/span>/gi;
+  // --- Top Hit ---
+  // <div class="topHit">...<a class="trackTitle" href="/Artist/Track/">Title</a>
+  //   <span class="trackArtist">by <a href="/Artist/">Artist</a></span>
+  const topHitPattern =
+    /<div[^>]*class="[^"]*topHit[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i;
+  const topHitMatch = topHitPattern.exec(html);
+  if (topHitMatch) {
+    const block = topHitMatch[1] ?? "";
+    const titleLink = /<a[^>]*class="[^"]*trackTitle[^"]*"[^>]*href="([^"]+)"[^>]*>\s*([^<]+)<\/a>/i.exec(block);
+    const artistSpan = /<span[^>]*class="[^"]*trackArtist[^"]*"[^>]*>[^<]*<a[^>]*>\s*([^<]+)<\/a>/i.exec(block);
+    if (titleLink) {
+      const href = titleLink[1] ?? "";
+      const track = (titleLink[2] ?? "").trim();
+      const artist = artistSpan ? (artistSpan[1] ?? "").trim() : "";
+      const url = buildFullUrl(href);
+      if (!seen.has(url)) {
+        seen.add(url);
+        results.push({ track, artist, whosampled_url: url });
+      }
+    }
+  }
 
-  // Extract entries that look like search result items
-  const entryPattern =
-    /<div[^>]*class="[^"]*(?:trackName|listEntry|searchResult|result)[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+  // --- Track List Entries ---
+  // <li class="listEntry trackEntry">
+  //   <span class="trackDetails">
+  //     <a class="trackName" href="/Artist/Track/" title="...">Track</a>
+  //     <span class="trackArtist">by <a href="/Artist/">Artist</a> (1994)</span>
+  //   </span>
+  // </li>
+  const listEntryPattern =
+    /<li[^>]*class="[^"]*listEntry[^"]*trackEntry[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
+  let listMatch: RegExpExecArray | null;
+  while ((listMatch = listEntryPattern.exec(html)) !== null) {
+    const block = listMatch[1] ?? "";
+    const nameLink = /<a[^>]*class="[^"]*trackName[^"]*"[^>]*href="([^"]+)"[^>]*>\s*([^<]+)<\/a>/i.exec(block);
+    if (!nameLink) continue;
 
-  let entryMatch: RegExpExecArray | null;
-  while ((entryMatch = entryPattern.exec(html)) !== null) {
-    const block = entryMatch[1] ?? "";
+    const href = nameLink[1] ?? "";
+    const track = (nameLink[2] ?? "").trim();
 
-    trackPattern.lastIndex = 0;
-    const linkMatch = trackPattern.exec(block);
-    if (!linkMatch) continue;
+    const artistSpan = /<span[^>]*class="[^"]*trackArtist[^"]*"[^>]*>[^<]*<a[^>]*>\s*([^<]+)<\/a>/i.exec(block);
+    const artist = artistSpan ? (artistSpan[1] ?? "").trim() : "";
 
-    const href = linkMatch[1] ?? "";
-    const trackName = (linkMatch[2] ?? "").trim();
-
-    artistPattern.lastIndex = 0;
-    const artistMatch = artistPattern.exec(block);
-    const artistName = artistMatch ? (artistMatch[1] ?? "").trim() : "";
-
-    // Try to extract sample counts
-    const countPattern = /(\d+)\s*sample/gi;
-    const sampledByPattern = /sampled\s*(?:by\s*)?(\d+)/gi;
-
-    countPattern.lastIndex = 0;
-    const countMatch = countPattern.exec(block);
-    sampledByPattern.lastIndex = 0;
-    const sampledByMatch = sampledByPattern.exec(block);
-
-    results.push({
-      track: trackName,
-      artist: artistName,
-      whosampled_url: buildFullUrl(href),
-      ...(countMatch ? { sample_count: parseInt(countMatch[1] ?? "0", 10) } : {}),
-      ...(sampledByMatch ? { sampled_by_count: parseInt(sampledByMatch[1] ?? "0", 10) } : {}),
-    });
+    const url = buildFullUrl(href);
+    if (!seen.has(url)) {
+      seen.add(url);
+      results.push({ track, artist, whosampled_url: url });
+    }
   }
 
   return results;
 }
 
 /**
- * Parse track sample relationships from a WhoSampled track page HTML.
- * Extracts "samples used" (what this track sampled) and "sampled by" (who sampled this).
+ * Parse track sample relationships from a WhoSampled track/artist page HTML.
+ *
+ * Real DOM structure:
+ *   <div class="trackConnections">
+ *     <div class="track-connection">
+ *       <span class="sampleAction">sampled</span>
+ *       <ul><li>
+ *         <a href="/sample/89797/..." class="connectionName playIcon">Title</a>
+ *         by <a href="/Artist/">Artist</a> (1969)
+ *       </li></ul>
+ *     </div>
+ *     <div class="track-connection">
+ *       <span class="sampleAction">was sampled in</span>
+ *       ...
+ *     </div>
+ *   </div>
  */
 export function parseTrackSamples(html: string): TrackSamples {
   const samples_used: SampleEntry[] = [];
   const sampled_by: SampleEntry[] = [];
 
-  // Split into sections — look for "Contains samples" and "Was sampled" headings
-  const sectionPattern =
-    /<(?:h[1-6]|div|section)[^>]*[^>]*>([\s\S]*?)(?=<(?:h[1-6]|div|section)[^>]*class|$)/gi;
+  // Match each track-connection block
+  const connectionBlockPattern =
+    /<div[^>]*class="[^"]*track-connection[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
 
-  // Parse individual sample entries from a section
-  function extractEntries(sectionHtml: string): SampleEntry[] {
-    const entries: SampleEntry[] = [];
-    // Match entries with track link + artist + optional year
-    const entryPattern =
-      /<a\s+[^>]*href="(\/[^"]+)"[^>]*>\s*([^<]+)<\/a>/gi;
+  let blockMatch: RegExpExecArray | null;
+  while ((blockMatch = connectionBlockPattern.exec(html)) !== null) {
+    const block = blockMatch[1] ?? "";
 
-    let match: RegExpExecArray | null;
-    while ((match = entryPattern.exec(sectionHtml)) !== null) {
-      const href = match[1] ?? "";
-      const title = (match[2] ?? "").trim();
+    // Determine direction from sampleAction span
+    const actionMatch = /<span[^>]*class="[^"]*sampleAction[^"]*"[^>]*>\s*([^<]+)<\/span>/i.exec(block);
+    const action = actionMatch ? (actionMatch[1] ?? "").trim().toLowerCase() : "";
 
-      // Skip navigation/non-track links
-      if (!href.includes("/") || href === "/" || title.length < 2) continue;
-      // Filter to track-like hrefs (at least 2 path segments)
-      const segments = href.split("/").filter(Boolean);
-      if (segments.length < 2) continue;
+    // "sampled" = this track sampled something (samples_used)
+    // "was sampled in" = something sampled this track (sampled_by)
+    const isSampledBy = action.includes("was sampled") || action.includes("sampled in");
+    const isSamplesUsed = !isSampledBy && action.includes("sampled");
 
-      // Find nearby artist name
-      const afterMatch = sectionHtml.slice((match.index ?? 0) + (match[0]?.length ?? 0), (match.index ?? 0) + (match[0]?.length ?? 0) + 300);
-      const artistInEntry = /<span[^>]*>\s*(?:by\s+)?([^<]+)<\/span>/i.exec(afterMatch);
-      const artist = artistInEntry ? (artistInEntry[1] ?? "").trim() : "";
+    if (!isSampledBy && !isSamplesUsed) continue;
 
-      // Find year
-      const yearMatch = /\b((?:19|20)\d{2})\b/.exec(afterMatch);
+    const target = isSampledBy ? sampled_by : samples_used;
+
+    // Extract each <li> connection entry
+    const liPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    let liMatch: RegExpExecArray | null;
+    while ((liMatch = liPattern.exec(block)) !== null) {
+      const li = liMatch[1] ?? "";
+
+      // Connection name link: <a href="/sample/..." class="connectionName ...">Title</a>
+      const connLink = /<a[^>]*class="[^"]*connectionName[^"]*"[^>]*href="([^"]+)"[^>]*>\s*([^<]+)<\/a>/i.exec(li)
+        ?? /<a[^>]*href="([^"]+)"[^>]*class="[^"]*connectionName[^"]*"[^>]*>\s*([^<]+)<\/a>/i.exec(li);
+      if (!connLink) continue;
+
+      const href = connLink[1] ?? "";
+      const title = (connLink[2] ?? "").trim();
+
+      // Artist: "by <a href="/Artist/">Artist Name</a>"
+      const afterConn = li.slice((connLink.index ?? 0) + (connLink[0]?.length ?? 0));
+      const artistLink = /by\s+<a[^>]*>\s*([^<]+)<\/a>/i.exec(afterConn);
+      const artist = artistLink ? (artistLink[1] ?? "").trim() : "";
+
+      // Year: (YYYY)
+      const yearMatch = /\((\d{4})\)/.exec(afterConn);
       const year = yearMatch ? parseInt(yearMatch[1] ?? "0", 10) : undefined;
 
-      // Find element type (e.g., "Vocals / Lyrics", "Drums", "Hook / Riff")
-      const elementMatch = /(?:element|genre|part)s?\s*[:>]\s*([^<]+)/i.exec(afterMatch);
-      const element = elementMatch ? (elementMatch[1] ?? "").trim() : undefined;
-
       // Determine type from surrounding context
-      const contextBlock = sectionHtml.slice(
-        Math.max(0, (match.index ?? 0) - 200),
-        (match.index ?? 0) + (match[0]?.length ?? 0) + 200,
-      );
-      const type = classifySampleType(contextBlock);
+      const type = classifySampleType(block);
 
-      entries.push({
+      target.push({
         title,
         artist,
         ...(year !== undefined ? { year } : {}),
         type,
-        ...(element ? { element } : {}),
         whosampled_url: buildFullUrl(href),
       });
     }
-
-    return entries;
-  }
-
-  // Look for "Contains samples" / "samples of" section
-  const samplesUsedPattern =
-    /(?:contains\s+samples?\s+of|samples?\s+of|sampled)([\s\S]*?)(?=(?:was\s+sampled|sampled\s+by|$))/i;
-  const samplesUsedMatch = samplesUsedPattern.exec(html);
-  if (samplesUsedMatch) {
-    const section = samplesUsedMatch[1] ?? "";
-    samples_used.push(...extractEntries(section));
-  }
-
-  // Look for "Was sampled by" / "Sampled by" section
-  const sampledByPattern =
-    /(?:was\s+sampled\s+(?:in|by)|sampled\s+by)([\s\S]*?)(?=(?:contains\s+samples|cover\s+versions|$))/i;
-  const sampledByMatch = sampledByPattern.exec(html);
-  if (sampledByMatch) {
-    const section = sampledByMatch[1] ?? "";
-    sampled_by.push(...extractEntries(section));
   }
 
   return { samples_used, sampled_by };
@@ -278,65 +287,90 @@ export function parseTrackSamples(html: string): TrackSamples {
 
 /**
  * Parse artist connections from a WhoSampled artist page HTML.
- * Extracts top sampled tracks and top sampling tracks with counts.
+ *
+ * Real DOM structure:
+ *   Stats:  <span class="section-header-title">1797 samples, 11 covers, 47 remixes</span>
+ *   Links:  <a href="/Artist/sampled/" ...>Songs that Sampled Artist (1409)</a>
+ *   Tracks: <h3 class="trackName"><a itemprop="url" href="/Artist/Track/">
+ *             <span itemprop="name">Track</span></a> <span class="trackYear"> (1994)</span></h3>
+ *   Counts: <a class="moreLink ... moreConnections" href="...">see 234 more connections</a>
+ *   Connections: div.trackConnections > div.track-connection (same as track page)
  */
 export function parseArtistConnections(html: string): ArtistConnections {
   const top_sampled_tracks: ArtistTopTrack[] = [];
   const top_sampling_tracks: ArtistTopTrack[] = [];
 
-  // Extract total counts from artist page
-  const totalSamplesUsed = /(\d+)\s*samples?\s*(?:used|of)/i.exec(html);
-  const totalSampledBy = /sampled\s*(?:by\s*)?(\d+)/i.exec(html);
+  // --- Extract total counts from stats summary ---
+  // <span class="section-header-title">1797 samples, 11 covers, 47 remixes</span>
+  const statsMatch = /<span[^>]*class="[^"]*section-header-title[^"]*"[^>]*>\s*([^<]+)<\/span>/i.exec(html);
+  let totalSamplesUsed: number | undefined;
+  let totalSampledBy: number | undefined;
 
-  // Parse track entries with sample counts
-  function extractTopTracks(sectionHtml: string): ArtistTopTrack[] {
-    const tracks: ArtistTopTrack[] = [];
-    const trackPattern =
-      /<a\s+[^>]*href="(\/[^"]+\/[^"]+\/)"[^>]*>\s*([^<]+)<\/a>/gi;
-
-    let match: RegExpExecArray | null;
-    while ((match = trackPattern.exec(sectionHtml)) !== null) {
-      const href = match[1] ?? "";
-      const trackName = (match[2] ?? "").trim();
-      if (trackName.length < 2) continue;
-
-      // Look for count near this entry
-      const afterMatch = sectionHtml.slice(
-        (match.index ?? 0) + (match[0]?.length ?? 0),
-        (match.index ?? 0) + (match[0]?.length ?? 0) + 200,
-      );
-      const countMatch = /(\d+)\s*(?:sample|connection|entr)/i.exec(afterMatch);
-      const count = countMatch ? parseInt(countMatch[1] ?? "0", 10) : 0;
-
-      tracks.push({
-        track: trackName,
-        sample_count: count,
-        whosampled_url: buildFullUrl(href),
-      });
+  if (statsMatch) {
+    const statsText = statsMatch[1] ?? "";
+    const samplesCount = /(\d[\d,]*)\s*samples?/i.exec(statsText);
+    if (samplesCount) {
+      totalSamplesUsed = parseInt((samplesCount[1] ?? "0").replace(/,/g, ""), 10);
     }
-
-    return tracks;
   }
 
-  // Sampled tracks section (tracks that sample others)
-  const samplingSection =
-    /(?:top\s+sampl(?:ing|ed)\s+track|tracks?\s+that\s+sampl(?:e|ed))([\s\S]*?)(?=(?:top\s+sampled|most\s+sampled|$))/i;
-  const samplingSectionMatch = samplingSection.exec(html);
-  if (samplingSectionMatch) {
-    top_sampling_tracks.push(...extractTopTracks(samplingSectionMatch[1] ?? ""));
+  // "Songs that Sampled Artist (1409)" link
+  const sampledByLink = /Songs\s+that\s+Sampled[^(]*\((\d[\d,]*)\)/i.exec(html);
+  if (sampledByLink) {
+    totalSampledBy = parseInt((sampledByLink[1] ?? "0").replace(/,/g, ""), 10);
   }
 
-  // Most sampled tracks section (tracks sampled by others)
-  const sampledSection =
-    /(?:most\s+sampled\s+track|top\s+sampled\s+track|tracks?\s+sampled\s+by)([\s\S]*?)(?=(?:top\s+sampling|tracks?\s+that\s+sample|$))/i;
-  const sampledSectionMatch = sampledSection.exec(html);
-  if (sampledSectionMatch) {
-    top_sampled_tracks.push(...extractTopTracks(sampledSectionMatch[1] ?? ""));
+  // --- Extract track entries with connection counts ---
+  // Each track: <h3 class="trackName"><a itemprop="url" href="..."><span itemprop="name">Track</span></a>
+  // Followed by trackConnections div and possibly a "see N more connections" link
+  const trackBlockPattern =
+    /<h3[^>]*class="[^"]*trackName[^"]*"[^>]*>([\s\S]*?)(?=<h3[^>]*class="[^"]*trackName|$)/gi;
+
+  let trackBlockMatch: RegExpExecArray | null;
+  while ((trackBlockMatch = trackBlockPattern.exec(html)) !== null) {
+    const block = trackBlockMatch[1] ?? "";
+
+    // Extract track name and URL
+    const trackLink = /<a[^>]*href="([^"]+)"[^>]*>\s*(?:<span[^>]*>)?\s*([^<]+)\s*(?:<\/span>)?\s*<\/a>/i.exec(block);
+    if (!trackLink) continue;
+
+    const href = trackLink[1] ?? "";
+    const trackName = (trackLink[2] ?? "").trim();
+    if (trackName.length < 2) continue;
+
+    // Count connections: count <li> items in trackConnections + "see N more" link
+    const connectionLis = (block.match(/<li[^>]*>/gi) ?? []).length;
+    const moreMatch = /see\s+(\d[\d,]*)\s+more\s+connections/i.exec(block);
+    const moreCount = moreMatch ? parseInt((moreMatch[1] ?? "0").replace(/,/g, ""), 10) : 0;
+    const totalConnections = connectionLis + moreCount;
+
+    // Determine if this track is in a "sampled" or "was sampled in" context
+    const actionMatch = /<span[^>]*class="[^"]*sampleAction[^"]*"[^>]*>\s*([^<]+)<\/span>/i.exec(block);
+    const action = actionMatch ? (actionMatch[1] ?? "").trim().toLowerCase() : "";
+
+    const entry: ArtistTopTrack = {
+      track: trackName,
+      sample_count: totalConnections,
+      whosampled_url: buildFullUrl(href),
+    };
+
+    if (action.includes("was sampled")) {
+      top_sampled_tracks.push(entry);
+    } else if (action.includes("sampled")) {
+      top_sampling_tracks.push(entry);
+    } else {
+      // Default: add to both if no clear action (common on overview pages)
+      top_sampled_tracks.push(entry);
+    }
   }
+
+  // Sort by connection count descending
+  top_sampled_tracks.sort((a, b) => b.sample_count - a.sample_count);
+  top_sampling_tracks.sort((a, b) => b.sample_count - a.sample_count);
 
   return {
-    ...(totalSamplesUsed ? { total_samples_used: parseInt(totalSamplesUsed[1] ?? "0", 10) } : {}),
-    ...(totalSampledBy ? { total_sampled_by: parseInt(totalSampledBy[1] ?? "0", 10) } : {}),
+    ...(totalSamplesUsed !== undefined ? { total_samples_used: totalSamplesUsed } : {}),
+    ...(totalSampledBy !== undefined ? { total_sampled_by: totalSampledBy } : {}),
     top_sampled_tracks,
     top_sampling_tracks,
   };
@@ -354,9 +388,10 @@ export async function searchWhoSampledHandler(args: { artist: string; track: str
 
     const html = await withBrowser(async (page) => {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await page.waitForTimeout(2000);
+      // Wait for Cloudflare Turnstile to auto-solve via Kernel stealth
+      await page.waitForTimeout(10_000);
       return await page.content();
-    });
+    }, { stealth: true });
 
     const results = parseSearchResults(html);
     return toolResult(results);
@@ -374,9 +409,9 @@ export async function getTrackSamplesHandler(args: { whosampled_url: string }) {
 
     const html = await withBrowser(async (page) => {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(10_000);
       return await page.content();
-    });
+    }, { stealth: true });
 
     // Extract title from <title> tag
     const titleMatch = /<title>([^<]*)<\/title>/i.exec(html);
@@ -397,9 +432,9 @@ export async function getArtistConnectionsHandler(args: { artist: string }) {
 
     const html = await withBrowser(async (page) => {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(10_000);
       return await page.content();
-    });
+    }, { stealth: true });
 
     const connections = parseArtistConnections(html);
     return toolResult(connections);
