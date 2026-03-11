@@ -204,8 +204,9 @@ Edit `SOUL.md` to customize how Crate thinks about music, what it values in rese
 | **Tumblr** | 5 (connect, post, blog info, disconnect, status) | Yes |
 | **Browser** | 2 (browse URL, screenshot page) | Yes |
 | **WhoSampled** | 3 (search tracks, sample connections, artist sample overview) | Yes* |
+| **Ticketmaster** | 4 (search events, search attractions, search venues, event details) | No |
 
-MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, Influence Cache, and Telegraph are always available — no API keys needed. The others activate automatically when you provide their API keys.
+MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, Influence Cache, Telegraph, and Ticketmaster are always available — no API keys needed. The others activate automatically when you provide their API keys.
 
 *Web Search and Influence Network use dual providers — Tavily (keyword) and Exa.ai (neural/semantic). Either key enables both servers; both keys unlock the full toolkit.
 
@@ -215,9 +216,19 @@ MusicBrainz, Wikipedia, Bandcamp, YouTube, Radio Browser, News, Influence Cache,
 
 Wikipedia supports optional [Wikimedia Enterprise](https://enterprise.wikimedia.com/) credentials for richer article content, with automatic fallback to free endpoints.
 
+### Key Tiers
+
+Crate uses a two-tier key architecture so most servers work out of the box with zero configuration.
+
+**Tier 1 — Zero-config (embedded default keys):**
+MusicBrainz, Wikipedia, Bandcamp, Last.fm, Discogs, Ticketmaster. These servers ship with embedded API keys and work immediately — no setup needed. You can override any embedded key with your own for priority access and higher rate limits.
+
+**Tier 2 — BYOK (bring your own key):**
+Genius, YouTube, Tumblr, Kernel (Browser + WhoSampled), Mem0, Web Search (Tavily / Exa). These servers require you to provide your own API key. Add keys via the `/keys` command or your `.env` file.
+
 ## Tools Reference
 
-Crate's agent has access to **95 tools** across 18 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
+Crate's agent has access to **99 tools** across 19 MCP servers. You don't call these directly — describe what you need and the agent picks the right tools automatically. Below is the full reference for what's available.
 
 ### MusicBrainz (always available)
 
@@ -438,6 +449,17 @@ Uses the same Kernel.sh cloud browser as the Browser server. See [Content Signal
 | `get_track_samples` | Get what a track sampled and who sampled it — title, artist, year, type, element, WhoSampled URL |
 | `get_artist_connections` | Artist's sampling footprint: total samples used/sampled by, top tracks in each direction |
 
+### Ticketmaster (always available)
+
+Live event and concert discovery via the [Ticketmaster Discovery API](https://developer.ticketmaster.com/). Ships with an embedded default key — works out of the box with no setup.
+
+| Tool | What it does |
+|------|-------------|
+| `search_events` | Search for concerts, festivals, and live events by keyword, city, date range, or genre |
+| `search_attractions` | Search for artists and performers with event counts and genre info |
+| `search_venues` | Search for venues by name or location — capacity, address, upcoming events |
+| `get_event_details` | Full event details: lineup, venue, dates, pricing, ticket links |
+
 ## Quick Start
 
 ### Prerequisites
@@ -495,7 +517,7 @@ npx tsx src/cli.ts --model sonnet
 
 ## MCP Server Mode
 
-Crate can run as a standard [MCP](https://modelcontextprotocol.io/) stdio server, exposing all 95 music research tools to any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and more.
+Crate can run as a standard [MCP](https://modelcontextprotocol.io/) stdio server, exposing all 99 music research tools to any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and more.
 
 ```bash
 # Via CLI flag
@@ -596,7 +618,7 @@ A now-playing bar auto-appears at the bottom of the terminal during playback, sh
 | `TUMBLR_CONSUMER_KEY` | Tumblr OAuth consumer key | No |
 | `TUMBLR_CONSUMER_SECRET` | Tumblr OAuth consumer secret | No |
 | `KERNEL_API_KEY` | Cloud browser for anti-bot bypass ([Kernel.sh](https://onkernel.com/)) | No |
-| `TICKETMASTER_API_KEY` | Live event and concert discovery | No |
+| `TICKETMASTER_API_KEY` | Override embedded Ticketmaster key for priority access ([developer.ticketmaster.com](https://developer.ticketmaster.com)) | No |
 
 All keys can be managed interactively from within Crate using the `/keys` command — no need to edit `.env` manually.
 
@@ -630,6 +652,7 @@ crate-cli/
 │   │   ├── telegraph.ts       # Telegraph publishing (5 tools, anonymous pages)
 │   │   ├── tumblr.ts          # Tumblr publishing (5 tools, OAuth 1.0a, NPF)
 │   │   ├── browser.ts         # Cloud browser (2 tools, Kernel.sh + Playwright)
+│   │   ├── ticketmaster.ts    # Ticketmaster events/venues (4 tools, embedded key)
 │   │   ├── whosampled.ts      # WhoSampled sample connections (3 tools, Kernel.sh browser)
 │   │   ├── collection.ts      # Local collection manager (SQLite)
 │   │   ├── playlist.ts        # Playlist manager (SQLite)
