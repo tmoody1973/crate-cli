@@ -18,6 +18,7 @@ import { telegraphServer } from "./telegraph.js";
 import { tumblrServer } from "./tumblr.js";
 import { browserServer } from "./browser.js";
 import { whoSampledServer } from "./whosampled.js";
+import { ticketmasterServer } from "./ticketmaster.js";
 import { resolveKey } from "../utils/config.js";
 
 export function getActiveServers(keys?: Record<string, string>): Record<string, any> {
@@ -36,7 +37,8 @@ export function getActiveServers(keys?: Record<string, string>): Record<string, 
   // if (hasKey("SPOTIFY_CLIENT_ID") && hasKey("SPOTIFY_CLIENT_SECRET"))
   //   servers.spotify = spotifyServer;
   if (hasKey("GENIUS_ACCESS_TOKEN")) servers.genius = geniusServer;
-  // if (hasKey("TICKETMASTER_API_KEY")) servers.events = eventsServer;
+  if (hasKey("TICKETMASTER_API_KEY"))
+    servers.ticketmaster = ticketmasterServer;
   servers.wikipedia = wikipediaServer; // Always available (free endpoints; Enterprise optional)
   servers.bandcamp = bandcampServer; // Always available (no API key required)
   servers.youtube = youtubeServer; // Always available (yt-dlp + mpv)
