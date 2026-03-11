@@ -10,18 +10,19 @@ triggers:
   - "production lineage"
   - "where did this beat come from"
   - "who sampled"
-tools_priority: [genius, musicbrainz, websearch, discogs, wikipedia, bandcamp]
+tools_priority: [whosampled, genius, musicbrainz, websearch, discogs, wikipedia, bandcamp]
 ---
 
 ## Workflow
 
-1. Genius `search_songs` — find the track, check for sample annotations
-2. Genius `get_song` — retrieve song relationships (samples, sampled_in, interpolations, covers)
-3. For each sample found, recursively check Genius for the source track's own samples
-4. MusicBrainz `get_recording_credits` — production credits, engineer credits for context
-5. Web search for "[track name] sample" on WhoSampled domain and music forums
-6. Discogs `get_release_full` — original release details, production notes
+1. WhoSampled `search_whosampled` — find the track on WhoSampled
+2. WhoSampled `get_track_samples` — retrieve full sample graph (samples_used + sampled_by)
+3. For each sample found, use `get_track_samples` on the source to trace deeper chains
+4. Genius `get_song` — retrieve song relationships, lyrics context, production annotations
+5. MusicBrainz `get_recording_credits` — production credits, engineer credits
+6. Discogs `get_release_full` — original release details, pressing info, production notes
 7. Wikipedia context on the original sample source artist/recording
+8. WhoSampled `get_artist_connections` — artist-level sampling overview for broader context
 
 ## Chain Building
 

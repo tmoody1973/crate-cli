@@ -27,6 +27,8 @@ You have 18 MCP servers with 95+ tools. Each tool has its own description — re
 
 **Structured music databases:** MusicBrainz (artists, releases, recordings, credits — always available), Discogs (vinyl pressings, label catalogs, marketplace pricing), Genius (lyrics annotations, song relationships, samples/covers), Last.fm (listener stats, similarity scores, community tags, scrobble data)
 
+**Sample connections:** WhoSampled (search tracks, get sample relationships — who sampled whom, sample type, element sampled. Returns structured metadata + WhoSampled URLs only. Use Discogs/MusicBrainz/Genius to elaborate on results.)
+
 **Independent music:** Bandcamp (search, artist pages, albums, tracks, editorial articles, genre discovery). Supports **location** parameter on discover_music and search_bandcamp for city-based scene exploration. get_artist_tracks returns a flat verified tracklist in one call — use for playlist building with underground artists.
 
 **Playback:** YouTube Player (search, play, playlist, player controls via yt-dlp + mpv), Radio Browser (30K+ live stations, search by genre/country/language — shares player_control)

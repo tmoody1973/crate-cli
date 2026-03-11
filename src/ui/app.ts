@@ -267,6 +267,12 @@ function getToolProgressMessage(toolName: string, input: Record<string, unknown>
         return "Capturing screenshot...";
       }
     }
+    case "search_whosampled":
+      return `Searching WhoSampled for "${input.artist} - ${input.track}"...`;
+    case "get_track_samples":
+      return "Fetching sample connections from WhoSampled...";
+    case "get_artist_connections":
+      return `Loading ${input.artist ?? "artist"}'s sample history on WhoSampled...`;
     default:
       return `Using ${toolName.replace(/_/g, " ")}...`;
   }
@@ -292,6 +298,7 @@ const SERVER_LABELS: Record<string, string> = {
   telegraph: "Telegraph",
   tumblr: "Tumblr",
   browser: "Browser",
+  whosampled: "WhoSampled",
 };
 
 /** Build a multi-source progress string with checkmarks for completed sources. */
