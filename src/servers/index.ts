@@ -17,6 +17,7 @@ import { influenceCacheServer } from "./influence-cache.js";
 import { telegraphServer } from "./telegraph.js";
 import { tumblrServer } from "./tumblr.js";
 import { browserServer } from "./browser.js";
+import { whoSampledServer } from "./whosampled.js";
 
 export function getActiveServers(): Record<string, any> {
   const servers: Record<string, any> = {
@@ -46,6 +47,7 @@ export function getActiveServers(): Record<string, any> {
   if (process.env.TUMBLR_CONSUMER_KEY && process.env.TUMBLR_CONSUMER_SECRET)
     servers.tumblr = tumblrServer;
   if (process.env.KERNEL_API_KEY) servers.browser = browserServer;
+  if (process.env.KERNEL_API_KEY) servers.whosampled = whoSampledServer;
 
   return servers;
 }
@@ -59,7 +61,7 @@ export function getServerStatus(): { active: string[]; inactive: string[] } {
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
-    "radio", "news", "collection", "playlist", "websearch", "influence", "influencecache", "telegraph", "tumblr", "browser",
+    "radio", "news", "collection", "playlist", "websearch", "influence", "influencecache", "telegraph", "tumblr", "browser", "whosampled",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };

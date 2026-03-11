@@ -267,6 +267,12 @@ function getToolProgressMessage(toolName: string, input: Record<string, unknown>
         return "Capturing screenshot...";
       }
     }
+    case "search_whosampled":
+      return `Searching WhoSampled for "${input.artist ?? "artist"} - ${input.track ?? "track"}"...`;
+    case "get_track_samples":
+      return "Fetching sample connections from WhoSampled...";
+    case "get_artist_connections":
+      return `Loading ${input.artist ?? "artist"}'s sample history on WhoSampled...`;
     default:
       return `Using ${toolName.replace(/_/g, " ")}...`;
   }
@@ -292,6 +298,7 @@ const SERVER_LABELS: Record<string, string> = {
   telegraph: "Telegraph",
   tumblr: "Tumblr",
   browser: "Browser",
+  whosampled: "WhoSampled",
 };
 
 /** Build a multi-source progress string with checkmarks for completed sources. */
@@ -724,6 +731,37 @@ async function handleResearchStream(
   const queryStartTime = Date.now();
   let aborted = false;
 
+  // Inline status loader — shows tool progress after the main loader is removed
+  let inlineLoader: Loader | null = null;
+  let inlineLoaderInserted = false;
+
+  const showInlineStatus = (msg: string) => {
+    if (inlineLoaderInserted && inlineLoader) {
+      inlineLoader.setMessage(msg);
+    } else {
+      // Create a fresh loader each time
+      inlineLoader = new Loader(
+        tui,
+        (s: string) => chalk.cyan(s),
+        (s: string) => chalk.dim(s),
+        msg,
+      );
+      addChildBeforeEditor(tui, inlineLoader);
+      inlineLoaderInserted = true;
+    }
+    tui.requestRender();
+  };
+
+  const hideInlineStatus = () => {
+    if (inlineLoader && inlineLoaderInserted) {
+      inlineLoader.stop();
+      tui.removeChild(inlineLoader);
+      inlineLoader = null;
+      inlineLoaderInserted = false;
+      tui.requestRender();
+    }
+  };
+
   // Influence sub-step ticker state
   let activeInfluenceTool: string | null = null;
   let influenceToolInput: Record<string, unknown> = {};
@@ -807,6 +845,10 @@ async function handleResearchStream(
               );
               loader.setMessage(buildProgressMessage(completed, event.server));
             }
+          } else {
+            // Loader already removed (answer text started) — show inline status
+            const progressMsg = getToolProgressMessage(bare, (event.input ?? {}) as Record<string, unknown>);
+            showInlineStatus(progressMsg);
           }
           break;
         }
@@ -835,6 +877,7 @@ async function handleResearchStream(
             removeLoader();
             addChildBeforeEditor(tui, response);
           }
+          hideInlineStatus();
           accumulated += event.token;
           response.setText(accumulated);
           tui.requestRender();
@@ -843,6 +886,7 @@ async function handleResearchStream(
 
         case "error": {
           removeLoader();
+          hideInlineStatus();
           addChildBeforeEditor(
             tui,
             new Text(chalk.red(`Error: ${event.message}`), 1, 0),
@@ -874,6 +918,7 @@ async function handleResearchStream(
     }
   } catch (err) {
     removeLoader();
+    hideInlineStatus();
     const message = err instanceof Error ? err.message : "An unexpected error occurred";
     addChildBeforeEditor(
       tui,
@@ -882,6 +927,7 @@ async function handleResearchStream(
   }
 
   removeLoader();
+  hideInlineStatus();
 
   return { accumulated, toolsUsed, sourcesUsed, aborted };
 }

@@ -55,9 +55,9 @@ export function isBrowserAvailable(): boolean {
  * Create a Kernel browser session, run a callback with the page, then clean up.
  * Ensures the remote browser is always torn down even if the callback throws.
  */
-async function withBrowser<T>(fn: (page: Page, browser: Browser) => Promise<T>): Promise<T> {
+export async function withBrowser<T>(fn: (page: Page, browser: Browser) => Promise<T>, options?: { stealth?: boolean }): Promise<T> {
   const kernel = getKernel();
-  const session = await kernel.browsers.create();
+  const session = await kernel.browsers.create({ stealth: options?.stealth });
   const browser = await chromium.connectOverCDP(session.cdp_ws_url);
   try {
     const context = browser.contexts()[0];
