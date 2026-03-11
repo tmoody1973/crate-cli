@@ -18,9 +18,11 @@ import { telegraphServer } from "./telegraph.js";
 import { tumblrServer } from "./tumblr.js";
 import { browserServer } from "./browser.js";
 import { whoSampledServer } from "./whosampled.js";
+import { resolveKey } from "../utils/config.js";
 
 export function getActiveServers(keys?: Record<string, string>): Record<string, any> {
-  const hasKey = (envVar: string): boolean => !!(keys?.[envVar] || process.env[envVar]);
+  const hasKey = (envVar: string): boolean =>
+    !!(keys?.[envVar] || resolveKey(envVar));
 
   const servers: Record<string, any> = {
     musicbrainz: musicbrainzServer,
@@ -62,7 +64,7 @@ export function getServerStatus(keys?: Record<string, string>): { active: string
   const active = Object.keys(getActiveServers(keys));
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
-    "spotify", "genius", "events", "wikipedia", "bandcamp", "youtube",
+    "spotify", "genius", "ticketmaster", "wikipedia", "bandcamp", "youtube",
     "radio", "news", "collection", "playlist", "websearch", "influence", "influencecache", "telegraph", "tumblr", "browser", "whosampled",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));

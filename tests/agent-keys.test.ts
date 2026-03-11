@@ -71,12 +71,13 @@ describe("CrateAgent with keys option", () => {
     expect(agent.serverNames).toContain("discogs");
   });
 
-  it("does not activate discogs when only one key provided", async () => {
+  it("activates discogs with one key provided (embedded key fills the gap)", async () => {
     const { CrateAgent } = await import("../src/agent/index.js");
     const agent = new CrateAgent({
       keys: { DISCOGS_KEY: "k" },
     });
-    expect(agent.serverNames).not.toContain("discogs");
+    // Embedded DISCOGS_SECRET fills in, so discogs is active
+    expect(agent.serverNames).toContain("discogs");
   });
 
   it("always includes musicbrainz regardless of keys", async () => {
@@ -92,6 +93,26 @@ describe("CrateAgent with keys option", () => {
     });
     expect(agent.serverNames).toContain("browser");
     expect(agent.serverNames).toContain("whosampled");
+  });
+
+  it("reloadServers preserves injected keys", async () => {
+    const { CrateAgent } = await import("../src/agent/index.js");
+    const agent = new CrateAgent({
+      keys: { GENIUS_ACCESS_TOKEN: "test-token" },
+    });
+    expect(agent.serverNames).toContain("genius");
+    agent.reloadServers();
+    expect(agent.serverNames).toContain("genius");
+  });
+
+  it("constructor shallow-copies keys to prevent external mutation", async () => {
+    const { CrateAgent } = await import("../src/agent/index.js");
+    const keys = { GENIUS_ACCESS_TOKEN: "test-token" };
+    const agent = new CrateAgent({ keys });
+    // Mutate original — should not affect agent
+    delete keys.GENIUS_ACCESS_TOKEN;
+    agent.reloadServers();
+    expect(agent.serverNames).toContain("genius");
   });
 });
 
@@ -122,15 +143,17 @@ describe("getActiveServers with keys param", () => {
     expect(servers).toHaveProperty("lastfm");
   });
 
-  it("no keys and no env yields only always-on servers", async () => {
+  it("no keys and no env yields always-on plus Tier 1 (embedded key) servers", async () => {
     const { getActiveServers } = await import("../src/servers/index.js");
     const servers = getActiveServers({});
     const names = Object.keys(servers);
-    // Should not contain any key-gated servers
+    // Should not contain Tier 2 key-gated servers (no embedded keys)
     expect(names).not.toContain("genius");
-    expect(names).not.toContain("discogs");
     expect(names).not.toContain("memory");
     expect(names).not.toContain("browser");
+    // Tier 1 servers activate via embedded keys
+    expect(names).toContain("discogs");
+    expect(names).toContain("lastfm");
     // Should contain always-on servers
     expect(names).toContain("musicbrainz");
     expect(names).toContain("wikipedia");
