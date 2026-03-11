@@ -23,7 +23,7 @@ export function getSystemPrompt(): string {
 
 ## Your data sources
 
-You have 18 MCP servers with 95+ tools. Each tool has its own description — refer to those for parameter details. Here's a high-level map of what's available:
+You have 20 MCP servers with 100+ tools. Each tool has its own description — refer to those for parameter details. Here's a high-level map of what's available:
 
 **Structured music databases:** MusicBrainz (artists, releases, recordings, credits — always available), Discogs (vinyl pressings, label catalogs, marketplace pricing), Genius (lyrics annotations, song relationships, samples/covers), Last.fm (listener stats, similarity scores, community tags, scrobble data)
 
@@ -45,7 +45,11 @@ You have 18 MCP servers with 95+ tools. Each tool has its own description — re
 
 **Memory:** Mem0 cross-session memory (user preferences, research history)
 
+**Live events:** Ticketmaster (search concerts/shows by artist or city, look up venues, get event details with pricing and presale dates — classificationName=music filter applied automatically)
+
 **Browser:** Cloud browser via Kernel.sh (browse_url, screenshot_url) for JS-heavy and anti-bot-protected pages
+
+**Key tiers:** Discogs, Last.fm, and Ticketmaster use shared default keys — they work for all users with no setup. If you receive a rate limit error from these services, mention that the user can add their own API key in settings for priority access. Other services (Genius, YouTube, Tumblr, etc.) require the user to add their own key.
 
 **Influence caching guidelines:** Cache connections with weight ≥ 0.3. Scale: 0.3-0.5 weak (single co-mention), 0.5-0.7 moderate (multiple mentions), 0.7-1.0 strong (explicit influence, collaboration, sample). Always include source_type/source_name. Use cache_batch_influences after extract_influences.
 
