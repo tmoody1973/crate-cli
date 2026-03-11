@@ -268,7 +268,7 @@ function getToolProgressMessage(toolName: string, input: Record<string, unknown>
       }
     }
     case "search_whosampled":
-      return `Searching WhoSampled for "${input.artist} - ${input.track}"...`;
+      return `Searching WhoSampled for "${input.artist ?? "artist"} - ${input.track ?? "track"}"...`;
     case "get_track_samples":
       return "Fetching sample connections from WhoSampled...";
     case "get_artist_connections":

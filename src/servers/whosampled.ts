@@ -104,21 +104,32 @@ function toolError(error: unknown): ToolResult {
   return { content: [{ type: "text" as const, text: JSON.stringify({ error: message }) }] };
 }
 
+let rateLimitPromise: Promise<void> | null = null;
+
 async function rateLimit(): Promise<void> {
-  const now = Date.now();
-  const elapsed = now - lastRequest;
-  if (elapsed < RATE_LIMIT_MS) {
-    await new Promise((r) => setTimeout(r, RATE_LIMIT_MS - elapsed));
-  }
-  lastRequest = Date.now();
+  const previousPromise = rateLimitPromise;
+  rateLimitPromise = (async () => {
+    if (previousPromise) await previousPromise;
+    const now = Date.now();
+    const elapsed = now - lastRequest;
+    if (elapsed < RATE_LIMIT_MS) {
+      await new Promise((r) => setTimeout(r, RATE_LIMIT_MS - elapsed));
+    }
+    lastRequest = Date.now();
+  })();
+  await rateLimitPromise;
 }
 
 function slugify(name: string): string {
-  return name
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9\-()'.]/g, "")
-    .replace(/-+/g, "-");
+  const hyphenated = name.trim().replace(/\s+/g, "-");
+  // Percent-encode non-ASCII and reserved chars to match WhoSampled URL format
+  // e.g. Beyoncé → Beyonc%C3%A9, Simon & Garfunkel → Simon-%26-Garfunkel
+  return encodeURIComponent(hyphenated)
+    .replace(/%2D/gi, "-")  // restore hyphens
+    .replace(/%2E/gi, ".")  // restore periods (M.I.A.)
+    .replace(/%28/gi, "(")  // restore parens
+    .replace(/%29/gi, ")")
+    .replace(/%27/gi, "%27"); // keep apostrophes encoded (Guns N' Roses)
 }
 
 function classifySampleType(text: string): SampleEntry["type"] {
