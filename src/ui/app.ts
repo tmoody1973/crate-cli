@@ -267,6 +267,14 @@ function getToolProgressMessage(toolName: string, input: Record<string, unknown>
         return "Capturing screenshot...";
       }
     }
+    case "search_events":
+      return `Searching for upcoming events${input.keyword ? ` for "${input.keyword}"` : ""}${input.city ? ` in ${input.city}` : ""}...`;
+    case "search_attractions":
+      return `Looking up "${input.keyword ?? "artist"}" on Ticketmaster...`;
+    case "search_venues":
+      return `Finding venues${input.keyword ? ` matching "${input.keyword}"` : ""}...`;
+    case "get_event_details":
+      return "Getting event details from Ticketmaster...";
     case "search_whosampled":
       return `Searching WhoSampled for "${input.artist ?? "artist"} - ${input.track ?? "track"}"...`;
     case "get_track_samples":
@@ -299,6 +307,7 @@ const SERVER_LABELS: Record<string, string> = {
   tumblr: "Tumblr",
   browser: "Browser",
   whosampled: "WhoSampled",
+  ticketmaster: "Ticketmaster",
 };
 
 /** Build a multi-source progress string with checkmarks for completed sources. */
