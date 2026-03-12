@@ -275,6 +275,14 @@ function getToolProgressMessage(toolName: string, input: Record<string, unknown>
       return `Finding venues${input.keyword ? ` matching "${input.keyword}"` : ""}...`;
     case "get_event_details":
       return "Getting event details from Ticketmaster...";
+    case "search_itunes_songs":
+      return `Searching iTunes for "${input.query}"...`;
+    case "search_itunes_albums":
+      return `Searching iTunes albums for "${input.query}"...`;
+    case "search_itunes_artists":
+      return `Searching iTunes artists for "${input.query}"...`;
+    case "lookup_itunes_album":
+      return `Looking up iTunes album #${input.albumId}...`;
     case "search_whosampled":
       return `Searching WhoSampled for "${input.artist ?? "artist"} - ${input.track ?? "track"}"...`;
     case "get_track_samples":
@@ -308,6 +316,7 @@ const SERVER_LABELS: Record<string, string> = {
   browser: "Browser",
   whosampled: "WhoSampled",
   ticketmaster: "Ticketmaster",
+  itunes: "iTunes",
 };
 
 /** Build a multi-source progress string with checkmarks for completed sources. */

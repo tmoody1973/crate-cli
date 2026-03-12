@@ -19,6 +19,7 @@ import { tumblrServer } from "./tumblr.js";
 import { browserServer } from "./browser.js";
 import { whoSampledServer } from "./whosampled.js";
 import { ticketmasterServer } from "./ticketmaster.js";
+import { createItunesServer } from "./itunes.js";
 import { resolveKey } from "../utils/config.js";
 
 export function getActiveServers(keys?: Record<string, string>): Record<string, any> {
@@ -54,6 +55,7 @@ export function getActiveServers(keys?: Record<string, string>): Record<string, 
     servers.tumblr = tumblrServer;
   if (hasKey("KERNEL_API_KEY")) servers.browser = browserServer;
   if (hasKey("KERNEL_API_KEY")) servers.whosampled = whoSampledServer;
+  servers.itunes = createItunesServer(); // Always available (free, no API key)
 
   return servers;
 }
@@ -67,7 +69,7 @@ export function getServerStatus(keys?: Record<string, string>): { active: string
   const allServers = [
     "musicbrainz", "discogs", "memory", "lastfm",
     "spotify", "genius", "ticketmaster", "wikipedia", "bandcamp", "youtube",
-    "radio", "news", "collection", "playlist", "websearch", "influence", "influencecache", "telegraph", "tumblr", "browser", "whosampled",
+    "radio", "news", "collection", "playlist", "websearch", "influence", "influencecache", "telegraph", "tumblr", "browser", "whosampled", "itunes",
   ];
   const inactive = allServers.filter((s) => !active.includes(s));
   return { active, inactive };
