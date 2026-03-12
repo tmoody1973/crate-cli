@@ -8,6 +8,7 @@ import {
   updateUserMemoryHandler,
 } from "../servers/memory.js";
 import type { CrateEvent } from "./events.js";
+import { classifyQuery, type QueryTier } from "./router.js";
 import { SkillRegistry } from "../skills/registry.js";
 import { Scratchpad } from "../utils/scratchpad.js";
 
@@ -16,6 +17,8 @@ const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 export interface CrateAgentOptions {
   model?: string;
   keys?: Record<string, string>;
+  /** Skip the planning pre-pass for lower latency (web use case). */
+  skipPlanning?: boolean;
 }
 
 /** Extract server name from a fully-qualified MCP tool name like mcp__musicbrainz__get_artist */
@@ -43,21 +46,29 @@ export class CrateAgent {
   private skillRegistry = new SkillRegistry();
   private skillsLoadedPromise?: Promise<void>;
   private scratchpad: Scratchpad | null;
+  private skipPlanning: boolean;
 
   constructor(optionsOrModel?: string | CrateAgentOptions) {
     if (typeof optionsOrModel === "string") {
       this.model = optionsOrModel;
+      this.skipPlanning = false;
     } else {
       this.model = optionsOrModel?.model ?? DEFAULT_MODEL;
-      this.keys = optionsOrModel?.keys;
+      this.keys = optionsOrModel?.keys ? { ...optionsOrModel.keys } : undefined;
+      this.skipPlanning = optionsOrModel?.skipPlanning ?? false;
     }
     this.servers = getActiveServers(this.keys);
-    this.memoryEnabled = !!(this.keys?.MEM0_API_KEY || process.env.MEM0_API_KEY);
+    this.memoryEnabled = this.hasMemoryKey();
     try {
       this.scratchpad = new Scratchpad();
     } catch {
       this.scratchpad = null;
     }
+  }
+
+  /** Check if a memory API key is available from injected keys or process.env. */
+  private hasMemoryKey(): boolean {
+    return !!(this.keys?.MEM0_API_KEY || process.env.MEM0_API_KEY);
   }
 
   get activeModel(): string {
@@ -75,7 +86,7 @@ export class CrateAgent {
   /** Reload servers from current keys/process.env (for hot-reloading after key changes). */
   reloadServers(): void {
     this.servers = getActiveServers(this.keys);
-    this.memoryEnabled = !!(this.keys?.MEM0_API_KEY || process.env.MEM0_API_KEY);
+    this.memoryEnabled = this.hasMemoryKey();
   }
 
   switchModel(alias: string): string {
@@ -84,7 +95,7 @@ export class CrateAgent {
     return resolved;
   }
 
-  /** Set a temporary suffix appended to the system prompt for the next call only. */
+  /** Set a persistent suffix appended to the system prompt for all subsequent calls. */
   setPromptSuffix(suffix: string | undefined): void {
     this.systemPromptSuffix = suffix;
   }
@@ -181,8 +192,80 @@ export class CrateAgent {
     }
   }
 
+  /** Classify query tier. Exposed for testing and UI hints. */
+  classifyQuery(message: string): QueryTier {
+    return classifyQuery(message);
+  }
+
+  /**
+   * Fast path for conversational queries — no MCP tools, no planning.
+   * Direct Claude call with system prompt only. ~1-2s response time.
+   */
+  private async *chatDirect(userMessage: string): AsyncGenerator<CrateEvent> {
+    this.conversationHistory.push({ role: "user", content: userMessage });
+    const startTime = Date.now();
+
+    let systemPrompt = getSystemPrompt();
+    if (this.systemPromptSuffix) {
+      systemPrompt = `${systemPrompt}\n\n${this.systemPromptSuffix}`;
+    }
+
+    const stream = query({
+      prompt: userMessage,
+      options: {
+        model: this.model,
+        systemPrompt,
+        maxTurns: 1, // No tool loops — single response
+        permissionMode: "bypassPermissions",
+        allowDangerouslySkipPermissions: true,
+      },
+    });
+
+    let assistantText = "";
+
+    try {
+      for await (const message of stream) {
+        if (
+          message.type === "result" &&
+          (message as Record<string, unknown>).subtype === "success"
+        ) {
+          this.totalCostUsd += ((message as Record<string, unknown>).total_cost_usd as number) ?? 0;
+        }
+
+        if (message.type === "assistant") {
+          const content = (message as Record<string, unknown>).message as Record<string, unknown> | undefined;
+          const blocks = (content?.content ?? []) as Array<Record<string, unknown>>;
+          for (const block of blocks) {
+            if (block.type === "text" && block.text) {
+              const token = block.text as string;
+              assistantText += token;
+              yield { type: "answer_token", token };
+            }
+          }
+        }
+      }
+    } catch (err) {
+      yield { type: "error", message: err instanceof Error ? err.message : "An unexpected error occurred" };
+    }
+
+    yield { type: "done", totalMs: Date.now() - startTime, toolsUsed: [], toolCallCount: 0, costUsd: this.totalCostUsd };
+
+    if (assistantText) {
+      this.conversationHistory.push({ role: "assistant", content: assistantText });
+    }
+  }
+
   /** Typed event stream for UI consumption. Yields CrateEvents instead of raw SDK messages. */
   async *research(userMessage: string): AsyncGenerator<CrateEvent> {
+    // Route: classify query and dispatch to appropriate handler
+    const tier = classifyQuery(userMessage);
+
+    // Chat tier: direct LLM response, no tools (~1-2s)
+    if (tier === "chat") {
+      yield* this.chatDirect(userMessage);
+      return;
+    }
+
     this.conversationHistory.push({ role: "user", content: userMessage });
 
     // Ensure skills are loaded
@@ -194,7 +277,6 @@ export class CrateAgent {
     }
     if (this.systemPromptSuffix) {
       systemPrompt = `${systemPrompt}\n\n${this.systemPromptSuffix}`;
-      this.systemPromptSuffix = undefined; // one-shot
     }
 
     // Match user query to a research skill and append its instructions
@@ -203,8 +285,8 @@ export class CrateAgent {
       systemPrompt = `${systemPrompt}\n\n## Active Research Skill: ${matchedSkill.name}\n${matchedSkill.instructions}`;
     }
 
-    // Task planning pre-pass — only for substantive research queries
-    const needsPlan = userMessage.split(/\s+/).length >= 4 && !/^(who|what) are you/i.test(userMessage) && !/^(hey|hi|hello|help|thanks)/i.test(userMessage);
+    // Task planning: only for research tier, and only if planning is enabled
+    const needsPlan = tier === "research" && !this.skipPlanning;
     const researchPlan = needsPlan ? await this.plan(userMessage) : null;
     if (researchPlan) {
       yield { type: "plan", tasks: researchPlan.tasks };
@@ -223,6 +305,11 @@ export class CrateAgent {
       systemPrompt = `${systemPrompt}\n\n## Research Plan for This Query\n${planText}\n\nWork through each task. You have full tool access.`;
     }
 
+    // Scale effort to query complexity (Anthropic best practice):
+    // lookup: 3-10 tool calls → 10 turns max
+    // research: full exploration → 25 turns max
+    const maxTurns = tier === "lookup" ? 10 : 25;
+
     const stream = query({
       prompt: userMessage,
       options: {
@@ -231,7 +318,7 @@ export class CrateAgent {
         mcpServers: this.servers as Record<string, never>,
         allowedTools: getAllowedTools(this.servers),
         resume: this.sessionId,
-        maxTurns: 25,
+        maxTurns,
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
       },
@@ -283,6 +370,9 @@ export class CrateAgent {
               const bare = bareToolName(fullName);
               const server = serverFromToolName(fullName);
               const input = block.input ?? {};
+
+              // Skip internal SDK tool calls (ToolSearch, etc.) — not useful for UI
+              if (server === "unknown") continue;
 
               toolCallCount++;
               if (!toolsUsed.includes(bare)) {

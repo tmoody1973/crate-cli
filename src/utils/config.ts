@@ -48,9 +48,9 @@ export function resolveModel(alias: string): string {
 /* ── Two-tier key architecture ─────────────────────────────────── */
 
 const EMBEDDED_KEYS: Record<string, Record<string, string>> = {
-  ticketmaster: { TICKETMASTER_API_KEY: "PLACEHOLDER_TICKETMASTER_KEY" },
-  lastfm: { LASTFM_API_KEY: "PLACEHOLDER_LASTFM_KEY" },
-  discogs: { DISCOGS_KEY: "PLACEHOLDER_DISCOGS_KEY", DISCOGS_SECRET: "PLACEHOLDER_DISCOGS_SECRET" },
+  ticketmaster: { TICKETMASTER_API_KEY: "AnLxbM6ZoV9iT5NUFgdNHQIUwAut8CQs" },
+  lastfm: { LASTFM_API_KEY: "5e0b428670c452f74f04ad87a6962370" },
+  discogs: { DISCOGS_KEY: "sKTZPYPhOlscKdcDfVEh", DISCOGS_SECRET: "hMMjGJIonlQxTIPOAVEeyVJLvtIQmvjE" },
 };
 
 // Reverse lookup: env var name → embedded value
