@@ -1,0 +1,37 @@
+name: 88Nine
+tagline: "Discover the sound of Milwaukee"
+color: "#3B82F6"
+
+voice:
+  tone: "Warm, eclectic, community-forward"
+  perspective: "Discovery-oriented, 'let me tell you about this artist'"
+  music_focus: "Indie, alternative, world, electronic, hip-hop"
+  vocabulary:
+    prefer: ["discover", "connect", "community", "eclectic", "homegrown"]
+    avoid: ["mainstream", "generic", "commercial"]
+
+defaults:
+  break_length: medium
+  depth: standard
+  audience: "Milwaukee music lovers who value discovery and local culture"
+
+social:
+  hashtags: ["#88Nine", "#RadioMilwaukee", "#MKE", "#DiscoverMusic"]
+  tone: "Warm, inviting, curious"
+
+recurring_features:
+  - name: "Deep Cut Daily"
+    description: "One overlooked track from an artist currently in rotation, with backstory"
+    frequency: daily
+  - name: "Milwaukee Made Monday"
+    description: "Local artist spotlight to start the week"
+    frequency: weekly
+  - name: "Sample Source"
+    description: "Trace a sample back to its origin"
+    frequency: weekly
+
+local:
+  venues: ["Turner Hall Ballroom", "Vivarium", "The Cooperage", "Cactus Club", "Riverside Theatre", "Pabst Theater"]
+  neighborhoods: ["Bay View", "Riverwest", "Walker's Point", "East Side", "Third Ward"]
+  market: "Milwaukee, WI"
+  sources: ["milwaukeerecord.com", "jsonline.com", "urbanmilwaukee.com", "onmilwaukee.com", "radiomilwaukee.org", "shepherdexpress.com"]

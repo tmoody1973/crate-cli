@@ -1,0 +1,34 @@
+name: HYFIN
+tagline: "Black alternative radio"
+color: "#D4A843"
+
+voice:
+  tone: "Bold, culturally sharp, unapologetic"
+  perspective: "Cultural context, movement-building, 'here's why this matters'"
+  music_focus: "Urban alternative, neo-soul, progressive hip-hop, Afrobeats"
+  vocabulary:
+    prefer: ["culture", "movement", "lineage", "vibration", "frequency"]
+    avoid: ["urban (standalone)", "exotic", "ethnic"]
+
+defaults:
+  break_length: medium
+  depth: deep_cultural_context
+  audience: "Young, culturally aware Milwaukee listeners invested in Black art and music"
+
+social:
+  hashtags: ["#HYFIN", "#MKE", "#BlackAlternative"]
+  tone: "Confident, community-first"
+
+recurring_features:
+  - name: "The Lineage"
+    description: "Influence chain connecting today's new release to its roots"
+    frequency: daily
+  - name: "Culture Check"
+    description: "Arts/culture moment from Black and brown communities locally and globally"
+    frequency: daily
+
+local:
+  venues: ["Turner Hall Ballroom", "Vivarium", "The Cooperage", "Cactus Club"]
+  neighborhoods: ["Bronzeville", "Riverwest", "Bay View", "Walker's Point"]
+  market: "Milwaukee, WI"
+  sources: ["milwaukeerecord.com", "jsonline.com", "urbanmilwaukee.com", "onmilwaukee.com"]

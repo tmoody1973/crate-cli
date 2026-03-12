@@ -1,0 +1,37 @@
+name: Rhythm Lab
+tagline: "Where the crates run deep"
+color: "#8B5CF6"
+
+voice:
+  tone: "Curated, global perspective, deep knowledge"
+  perspective: "Influence tracing, crate-digging stories, 'the thread connecting these sounds'"
+  music_focus: "Global beats, electronic, jazz fusion, experimental, Afrobeats, dub"
+  vocabulary:
+    prefer: ["lineage", "crate", "connection", "thread", "sonic", "palette"]
+    avoid: ["world music (reductive)", "niche", "obscure (dismissive)"]
+
+defaults:
+  break_length: long
+  depth: deep_music_history
+  audience: "Dedicated music heads, DJs, producers, and crate diggers who value context and connection"
+
+social:
+  hashtags: ["#RhythmLab", "#CrateDigging", "#GlobalBeats", "#MKE"]
+  tone: "Knowledgeable, passionate, collegial"
+
+recurring_features:
+  - name: "Crate Connection"
+    description: "How two seemingly unrelated tracks share DNA"
+    frequency: daily
+  - name: "Global Dispatch"
+    description: "Music from a specific city/region with cultural context"
+    frequency: weekly
+  - name: "The Remix Tree"
+    description: "Track a song through its remix/cover/sample ecosystem"
+    frequency: weekly
+
+local:
+  venues: ["Turner Hall Ballroom", "Vivarium", "The Cooperage", "Cactus Club", "Jazz Estate"]
+  neighborhoods: ["Riverwest", "Bay View", "Bronzeville", "Walker's Point"]
+  market: "Milwaukee, WI"
+  sources: ["milwaukeerecord.com", "jsonline.com", "urbanmilwaukee.com", "onmilwaukee.com"]
