@@ -1,6 +1,6 @@
 {
   "name": "crate-cli",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "AI-powered music research agent for the terminal",
   "type": "module",
   "main": "dist/cli.js",
@@ -30,7 +30,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.49",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.74",
     "@mariozechner/pi-tui": "^0.54.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@onkernel/sdk": "^0.39.0",
