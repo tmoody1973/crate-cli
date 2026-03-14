@@ -517,7 +517,7 @@ npx tsx src/cli.ts --model sonnet
 
 ## MCP Server Mode
 
-Crate can run as a standard [MCP](https://modelcontextprotocol.io/) stdio server, exposing all 99 music research tools to any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and more.
+Crate can run as a standard [MCP](https://modelcontextprotocol.io/) stdio server, exposing all active music research tools to any MCP-compatible client — Claude Desktop, Cursor, OpenClaw, and more.
 
 ```bash
 # Via CLI flag
@@ -564,7 +564,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-Tools are prefixed by server name (e.g. `musicbrainz_search_artist`, `bandcamp_get_album`, `influence_trace_influence_path`). Only servers with configured API keys are exposed — see [Environment Variables](#environment-variables).
+Tools are prefixed by server name (e.g. `musicbrainz_search_artist`, `bandcamp_get_album`, `influence_trace_influence_path`). Only active servers are exposed. Always-on servers are always present, and Discogs / Last.fm / Ticketmaster can also activate via the shared fallback keys described below.
 
 ## Commands
 
@@ -622,6 +622,8 @@ A now-playing bar auto-appears at the bottom of the terminal during playback, sh
 
 All keys can be managed interactively from within Crate using the `/keys` command — no need to edit `.env` manually.
 
+Discogs, Last.fm, and Ticketmaster also have shared fallback keys baked into the CLI so the default experience works without manual setup. Adding your own keys overrides those shared defaults and is the better choice for reliability and rate-limit isolation.
+
 ## Project Structure
 
 ```
@@ -633,6 +635,7 @@ crate-cli/
 │   ├── agent/
 │   │   ├── index.ts           # CrateAgent class (wraps Claude Agent SDK)
 │   │   ├── events.ts          # CrateEvent union type (typed event stream)
+│   │   ├── router.ts          # Query tier classifier (chat / lookup / research)
 │   │   └── system-prompt.ts   # Loads SOUL.md + tool docs
 │   ├── servers/
 │   │   ├── index.ts           # Server registry (key-gated activation)
@@ -701,12 +704,12 @@ crate-cli/
 
 ## Security
 
-- All external API calls use HTTPS with 15-second `AbortController` timeouts
-- API keys are loaded from environment variables — never hardcoded
+- Most external API calls use HTTPS with explicit request timeouts
+- User-provided API keys are loaded from environment variables or the in-app key manager
+- Discogs, Last.fm, and Ticketmaster also have shared fallback keys in [`src/utils/config.ts`](src/utils/config.ts); user keys override them
 - All tool string inputs have `maxLength` validation via Zod schemas
 - Radio stream URLs are validated for HTTP/HTTPS before passing to mpv
 - `execFileSync` with array arguments is used for subprocess calls (prevents shell injection)
-- Subprocess events use `once()` to prevent listener accumulation
 
 ## Development
 

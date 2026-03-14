@@ -17,6 +17,11 @@ import { influenceTools } from "./influence.js";
 import { influenceCacheTools } from "./influence-cache.js";
 import { telegraphTools } from "./telegraph.js";
 import { tumblrTools } from "./tumblr.js";
+import { browserTools } from "./browser.js";
+import { whoSampledTools } from "./whosampled.js";
+import { ticketmasterTools } from "./ticketmaster.js";
+import { itunesTools } from "./itunes.js";
+import { resolveKey } from "../utils/config.js";
 
 export interface ToolGroup {
   serverName: string;
@@ -25,6 +30,7 @@ export interface ToolGroup {
 
 export function getActiveTools(): ToolGroup[] {
   const active: ToolGroup[] = [];
+  const hasKey = (envVar: string): boolean => !!resolveKey(envVar);
 
   // Always available
   active.push({ serverName: "musicbrainz", tools: musicbrainzTools });
@@ -37,22 +43,29 @@ export function getActiveTools(): ToolGroup[] {
   active.push({ serverName: "playlist", tools: playlistTools });
   active.push({ serverName: "influencecache", tools: influenceCacheTools });
   active.push({ serverName: "telegraph", tools: telegraphTools });
+  active.push({ serverName: "itunes", tools: itunesTools });
+  if (hasKey("TICKETMASTER_API_KEY"))
+    active.push({ serverName: "ticketmaster", tools: ticketmasterTools });
 
   // Key-gated
-  if (process.env.DISCOGS_KEY && process.env.DISCOGS_SECRET)
+  if (hasKey("DISCOGS_KEY") && hasKey("DISCOGS_SECRET"))
     active.push({ serverName: "discogs", tools: discogsTools });
-  if (process.env.MEM0_API_KEY)
+  if (hasKey("MEM0_API_KEY"))
     active.push({ serverName: "memory", tools: memoryTools });
-  if (process.env.LASTFM_API_KEY)
+  if (hasKey("LASTFM_API_KEY"))
     active.push({ serverName: "lastfm", tools: lastfmTools });
-  if (process.env.GENIUS_ACCESS_TOKEN)
+  if (hasKey("GENIUS_ACCESS_TOKEN"))
     active.push({ serverName: "genius", tools: geniusTools });
   if (hasTavily() || hasExa()) {
     active.push({ serverName: "websearch", tools: webSearchTools });
     active.push({ serverName: "influence", tools: influenceTools });
   }
-  if (process.env.TUMBLR_CONSUMER_KEY && process.env.TUMBLR_CONSUMER_SECRET)
+  if (hasKey("TUMBLR_CONSUMER_KEY") && hasKey("TUMBLR_CONSUMER_SECRET"))
     active.push({ serverName: "tumblr", tools: tumblrTools });
+  if (hasKey("KERNEL_API_KEY")) {
+    active.push({ serverName: "browser", tools: browserTools });
+    active.push({ serverName: "whosampled", tools: whoSampledTools });
+  }
 
   return active;
 }

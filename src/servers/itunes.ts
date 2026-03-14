@@ -234,10 +234,12 @@ const lookupAlbumTracks = tool(
 
 // ── Server ─────────────────────────────────────────────────────────
 
+export const itunesTools = [searchSongs, searchAlbums, searchArtists, lookupAlbumTracks];
+
 export function createItunesServer() {
   return createSdkMcpServer({
     name: "itunes",
     version: "1.0.0",
-    tools: [searchSongs, searchAlbums, searchArtists, lookupAlbumTracks],
+    tools: itunesTools,
   });
 }
