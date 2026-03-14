@@ -5,23 +5,30 @@ import { useState } from "react";
 
 const SOURCES = [
   { name: "MusicBrainz", tools: 6, category: "Metadata" },
+  { name: "Wikipedia", tools: 3, category: "Context" },
   { name: "Bandcamp", tools: 7, category: "Independent" },
   { name: "Discogs", tools: 9, category: "Collectors" },
-  { name: "YouTube", tools: 6, category: "Video" },
-  { name: "Last.fm", tools: 7, category: "Scrobbles" },
-  { name: "Genius", tools: 8, category: "Lyrics" },
-  { name: "Spotify", tools: 4, category: "Streaming" },
-  { name: "Wikipedia", tools: 3, category: "Encyclopedia" },
-  { name: "SoundStats", tools: 3, category: "Analysis" },
-  { name: "Events", tools: 6, category: "Live" },
-  { name: "Collection", tools: 5, category: "Library" },
-  { name: "Web Search", tools: 4, category: "Discovery" },
-  { name: "Influence", tools: 3, category: "Research" },
+  { name: "YouTube", tools: 4, category: "Playback" },
+  { name: "Radio", tools: 4, category: "Broadcast" },
+  { name: "News", tools: 3, category: "Editorial" },
+  { name: "Collection", tools: 6, category: "Library" },
+  { name: "Playlist", tools: 7, category: "Sequencing" },
+  { name: "Last.fm", tools: 8, category: "Scrobbles" },
+  { name: "Genius", tools: 6, category: "Lyrics" },
+  { name: "Web Search", tools: 3, category: "Discovery" },
+  { name: "Influence", tools: 4, category: "Research" },
   { name: "Influence Cache", tools: 8, category: "Network" },
-  { name: "Memory", tools: 3, category: "Personal" },
+  { name: "Ticketmaster", tools: 4, category: "Live" },
+  { name: "iTunes", tools: 4, category: "Catalog" },
+  { name: "Memory", tools: 4, category: "Personal" },
   { name: "Telegraph", tools: 5, category: "Publishing" },
   { name: "Tumblr", tools: 5, category: "Blogging" },
+  { name: "Browser", tools: 2, category: "Browser" },
+  { name: "WhoSampled", tools: 3, category: "Samples" },
 ];
+
+const TOTAL_TOOLS = SOURCES.reduce((sum, source) => sum + source.tools, 0);
+const TOTAL_SOURCES = SOURCES.length;
 
 const PUBLICATIONS = [
   "Pitchfork",
@@ -208,10 +215,9 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto max-w-xl text-lg leading-relaxed text-[#b0b0b0] mb-12">
-            The only agentic AI tool built for music research. 92 tools
-            across 17 sources. Influence tracing powered by Harvard research.
-            A terminal agent and MCP server that understands music the way
-            critics and collectors do.
+            A terminal agent and MCP server for deep music research.
+            Up to {TOTAL_TOOLS} tools across {TOTAL_SOURCES} sources, with
+            influence tracing, local knowledge, and playback in one workflow.
           </p>
 
           <div className="flex flex-col items-center gap-4">
@@ -231,9 +237,9 @@ export default function Home() {
         {/* Stats row */}
         <div className="mx-auto mt-20 grid max-w-3xl grid-cols-3 gap-px border border-[#222]">
           {[
-            { number: "92", label: "Tools" },
-            { number: "17", label: "Sources" },
-            { number: "26", label: "Publications" },
+            { number: String(TOTAL_TOOLS), label: "Tools" },
+            { number: String(TOTAL_SOURCES), label: "Sources" },
+            { number: String(PUBLICATIONS.length), label: "Publications" },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -264,11 +270,10 @@ export default function Home() {
                 built for music.
               </h2>
               <p className="text-lg leading-relaxed text-[#888]">
-                Crate is the most powerful agentic AI tool for music research.
-                It connects to 17 data sources — from MusicBrainz and Discogs
-                to Bandcamp and Genius — giving you research-grade access to
-                the full landscape of recorded music through a single
-                conversation.
+                Crate is a research-first CLI and MCP server for music.
+                It connects structured music databases, editorial sources,
+                local caches, and playback tools so one conversation can do
+                the work of a dozen disconnected tabs.
               </p>
             </div>
             <div className="flex flex-col gap-8 md:border-l border-[#222] md:pl-12">
@@ -468,7 +473,7 @@ export default function Home() {
               {
                 name: "Crate",
                 type: "The Only One",
-                does: "92 tools, 17 sources, influence tracing, knowledge graph, audio playback, publishing",
+                does: "Cross-source research, influence tracing, local knowledge graph, audio playback, and publishing",
                 gap: "",
               },
             ].map((item) => (
@@ -591,7 +596,7 @@ export default function Home() {
                   },
                   {
                     label: "Platform-independent",
-                    desc: "Searches across 17 sources — Bandcamp, Discogs, MusicBrainz, YouTube, and more. Finds releases that don't exist on any single platform.",
+                    desc: "Searches across structured music databases, editorial sources, and local caches. Finds releases and connections that do not live on any single platform.",
                   },
                 ].map((item) => (
                   <div key={item.label}>
@@ -775,9 +780,9 @@ export default function Home() {
             </h2>
             <p className="text-lg leading-relaxed text-[#888]">
               Run <span className="font-[family-name:var(--font-geist-mono)] text-[#ededed]">crate --mcp-server</span> to
-              expose all 92 tools as a standard MCP server over stdio. Any MCP
-              client — Claude Desktop, Cursor, OpenClaw, or your own agent —
-              gets instant access to Crate&apos;s full music research stack.
+              expose Crate&apos;s active tools as a standard MCP server over stdio.
+              Any MCP client — Claude Desktop, Cursor, OpenClaw, or your own
+              agent — gets direct access to the same music research stack.
               No TUI, no agent loop, just raw tools.
             </p>
           </div>
@@ -866,7 +871,7 @@ export default function Home() {
           {/* Feature tags */}
           <div className="flex flex-wrap justify-center gap-3">
             {[
-              "92+ tools",
+              `${TOTAL_TOOLS} tools`,
               "stdio transport",
               "zero config",
               "env-var gating",
@@ -895,7 +900,7 @@ export default function Home() {
             Data Sources
           </p>
           <h2 className="font-[family-name:var(--font-playfair)] text-4xl leading-[1.1] tracking-[-0.02em] sm:text-5xl mb-16">
-            17 sources. 92 tools.
+            {TOTAL_SOURCES} sources. {TOTAL_TOOLS} tools.
             <br />
             One conversation.
           </h2>
@@ -939,9 +944,10 @@ export default function Home() {
             </h2>
             <p className="text-lg leading-relaxed text-[#888]">
               Crate uses Anthropic&apos;s Agent SDK to orchestrate multi-turn
-              research across all 17 sources. Claude decides which tools to call,
-              chains results together, and reasons through complex queries — all
-              in a single conversation loop.
+              research across structured databases, web sources, and local
+              caches. Claude decides which tools to call, chains results
+              together, and reasons through complex queries in a single
+              conversation loop.
             </p>
           </div>
 
@@ -1091,10 +1097,13 @@ export default function Home() {
 
           {/* Infographic */}
           <div className="mb-20 border border-[#222] bg-[#141414] p-4 sm:p-8">
-            <img
+            <Image
               src="/influence-infographic.jpg"
               alt="Crate's Influence Network: Review-Driven Discovery — How it maps artistic influence from reviews, not just plays. Shows three features: Review-Driven Discovery (finding connections from 26 publications), Influence Tracing (building multi-hop paths between artists), and Influence Cache (local knowledge graph with BFS path-finding)."
-              className="w-full rounded-sm"
+              width={1600}
+              height={900}
+              className="h-auto w-full rounded-sm"
+              sizes="(min-width: 1024px) 1200px, 100vw"
             />
             <p className="mt-4 font-[family-name:var(--font-geist-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#555] text-center">
               How Crate maps artistic influence from reviews — not streaming algorithms
