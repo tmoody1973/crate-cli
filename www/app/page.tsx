@@ -6,7 +6,7 @@ import { useState } from "react";
 const SOURCES = [
   { name: "MusicBrainz", tools: 6, category: "Metadata" },
   { name: "Wikipedia", tools: 3, category: "Context" },
-  { name: "Bandcamp", tools: 7, category: "Independent" },
+  { name: "Bandcamp", tools: 8, category: "Independent" },
   { name: "Discogs", tools: 9, category: "Collectors" },
   { name: "YouTube", tools: 4, category: "Playback" },
   { name: "Radio", tools: 4, category: "Broadcast" },
