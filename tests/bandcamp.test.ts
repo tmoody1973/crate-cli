@@ -1,11 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
+const originalBandcampDelay = process.env.BANDCAMP_MIN_DELAY_MS;
 
 describe("bandcamp", () => {
   beforeEach(() => {
+    vi.resetModules();
+    process.env.BANDCAMP_MIN_DELAY_MS = "0";
     mockFetch.mockReset();
+  });
+
+  afterAll(() => {
+    if (originalBandcampDelay === undefined) {
+      delete process.env.BANDCAMP_MIN_DELAY_MS;
+    } else {
+      process.env.BANDCAMP_MIN_DELAY_MS = originalBandcampDelay;
+    }
   });
 
   describe("bandcampFetch", () => {

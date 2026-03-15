@@ -293,8 +293,10 @@ const screenshotUrl = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const browserTools = [browseUrl, screenshotUrl];
+
 export const browserServer = createSdkMcpServer({
   name: "browser",
   version: "0.1.0",
-  tools: [browseUrl, screenshotUrl],
+  tools: browserTools,
 });

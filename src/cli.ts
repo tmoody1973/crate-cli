@@ -36,9 +36,9 @@ Usage:
   crate --mcp-server             Start as MCP stdio server
 
 Models:
-  sonnet (default)               Everyday research
+  haiku (default)                Quick lookups
+  sonnet                         Everyday research
   opus                           Deep research sessions
-  haiku                          Quick lookups
 
 Options:
   --model, -m <name>             Set the Claude model

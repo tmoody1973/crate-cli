@@ -17,12 +17,12 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "Crate — AI-Powered Music Research Agent",
   description:
-    "92 tools across 17 sources. Influence tracing powered by Harvard research. The deepest music discovery CLI ever built.",
+    "A terminal-first music research agent and MCP server with cross-source discovery, influence tracing, and verified playback.",
   metadataBase: new URL("https://crate-cli.dev"),
   openGraph: {
     title: "Crate — AI-Powered Music Research Agent",
     description:
-      "92 tools across 17 sources. Influence tracing backed by Harvard research. Every claim cited, every track verified.",
+      "A terminal-first music research agent and MCP server with cross-source discovery, influence tracing, and verified playback.",
     type: "website",
     url: "https://crate-cli.dev",
     images: [
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Crate — AI-Powered Music Research Agent",
     description:
-      "92 tools across 17 sources. Influence tracing backed by Harvard research. Every claim cited, every track verified.",
+      "A terminal-first music research agent and MCP server with cross-source discovery, influence tracing, and verified playback.",
     images: ["/og-image.png"],
   },
 };

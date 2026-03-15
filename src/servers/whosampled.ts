@@ -490,8 +490,10 @@ const getArtistConnections = tool(
 // Server export
 // ---------------------------------------------------------------------------
 
+export const whoSampledTools = [searchWhoSampled, getTrackSamples, getArtistConnections];
+
 export const whoSampledServer = createSdkMcpServer({
   name: "whosampled",
   version: "0.1.0",
-  tools: [searchWhoSampled, getTrackSamples, getArtistConnections],
+  tools: whoSampledTools,
 });

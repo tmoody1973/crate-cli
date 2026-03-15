@@ -38,6 +38,14 @@ function fakeProcess() {
       handlers[event] = handlers[event] ?? [];
       handlers[event]!.push(handler);
     },
+    once: (event: string, handler: Function) => {
+      handlers[event] = handlers[event] ?? [];
+      const wrapped = (...args: any[]) => {
+        handlers[event] = (handlers[event] ?? []).filter((fn) => fn !== wrapped);
+        handler(...args);
+      };
+      handlers[event]!.push(wrapped);
+    },
     kill: vi.fn(),
     _emit: (event: string, ...args: any[]) => {
       for (const h of handlers[event] ?? []) h(...args);

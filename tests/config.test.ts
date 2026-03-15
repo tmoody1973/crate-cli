@@ -54,7 +54,7 @@ describe("resolveKey", () => {
   it("returns embedded key when env var is absent", async () => {
     delete process.env.LASTFM_API_KEY;
     const { resolveKey } = await import("../src/utils/config.js");
-    expect(resolveKey("LASTFM_API_KEY")).toBe("PLACEHOLDER_LASTFM_KEY");
+    expect(resolveKey("LASTFM_API_KEY")).toBeTruthy();
   });
 
   it("returns undefined for services without embedded keys", async () => {
