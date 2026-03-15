@@ -39,7 +39,7 @@ export function classifyQuery(message: string): QueryTier {
     return "research";
   }
 
-  if (wordCount >= 18 || /[,;:]/.test(trimmed)) {
+  if (wordCount >= 18 || /[;]/.test(trimmed)) {
     return "research";
   }
 

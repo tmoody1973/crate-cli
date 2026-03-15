@@ -25,7 +25,8 @@ const rssParser = new RSSParser();
 // ---------------------------------------------------------------------------
 
 let lastRequest = 0;
-const MIN_DELAY_MS = Math.max(0, Number(process.env.BANDCAMP_MIN_DELAY_MS ?? "1500"));
+const _parsed = Number(process.env.BANDCAMP_MIN_DELAY_MS ?? "1500");
+const MIN_DELAY_MS = Number.isFinite(_parsed) ? Math.max(0, _parsed) : 1500;
 
 async function rateLimit(): Promise<void> {
   const now = Date.now();
